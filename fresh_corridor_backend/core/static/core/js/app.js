@@ -4,6 +4,7 @@ Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOi
 
 let viewer = null;
 const API_BASE = '/api'; // Relative path for Django
+let selectedZoneId = null;
 
 function initCesium() {
     if (viewer) return;
@@ -12,11 +13,12 @@ function initCesium() {
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
-        infoBox: false,
+        infoBox: true,
         sceneModePicker: false,
         navigationHelpButton: false,
         timeline: false,
-        animation: false
+        animation: false,
+        selectionIndicator: true
     });
 
     // Set View to New Delhi immediately
@@ -37,18 +39,109 @@ async function fetchZonesForMap() {
     try {
         const res = await fetch(`${API_BASE}/planner/`);
         const zones = await res.json();
+
         zones.forEach(z => {
-            viewer.entities.add({
+            let entity = viewer.entities.add({
+                name: z.name,
+                id: 'zone_' + z.id,
                 position: Cesium.Cartesian3.fromDegrees(z.longitude, z.latitude),
-                point: { pixelSize: 10, color: Cesium.Color.fromCssColorString('#0d9488') },
+                point: { pixelSize: 15, color: Cesium.Color.fromCssColorString('#0d9488'), outlineWidth: 2, outlineColor: Cesium.Color.WHITE },
                 label: {
                     text: z.name,
                     font: '14px sans-serif',
-                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    pixelOffset: new Cesium.Cartesian2(0, -10)
+                },
+                properties: {
+                    zone_id: z.id
                 }
             });
         });
+
+        // Handle Zone Click for Simulation
+        viewer.selectedEntityChanged.addEventListener(function (entity) {
+            if (entity && entity.id.startsWith('zone_')) {
+                selectedZoneId = entity.properties.zone_id.getValue();
+                document.getElementById('sim-panel').style.display = 'block';
+                document.getElementById('resilience-panel').style.display = 'flex';
+                // Fetch standard metrics
+                fetchResilienceMetrics(selectedZoneId);
+            } else {
+                selectedZoneId = null;
+                document.getElementById('sim-panel').style.display = 'none';
+                document.getElementById('resilience-panel').style.display = 'none';
+            }
+        });
+
     } catch (e) { console.error("Map Data Error", e); }
+}
+
+async function fetchResilienceMetrics(id) {
+    try {
+        const res = await fetch(`${API_BASE}/planner/${id}/resilience_metrics/`);
+        const data = await res.json();
+
+        if (data.metrics) {
+            document.getElementById('metric-overall').innerText = data.overall_resilience_score;
+            document.getElementById('metric-aqi').innerText = data.metrics.aqi_score;
+            document.getElementById('metric-med').innerText = data.metrics.medical_capacity_score;
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function runSimulation() {
+    if (!selectedZoneId) { alert("Select a zone first!"); return; }
+
+    const rain = document.getElementById('sim-rain').value;
+    const traffic = document.getElementById('sim-traffic').value;
+
+    const btn = document.querySelector('#sim-panel button');
+    btn.innerText = "Simulating...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/planner/${selectedZoneId}/simulate/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({
+                rain_intensity: rain,
+                traffic_load: traffic
+            })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            document.getElementById('sim-results').style.display = 'block';
+            document.getElementById('res-traffic').innerText = data.scenarios.traffic_congestion_display;
+            document.getElementById('res-ambulance').innerText = "+" + data.scenarios.ambulance_response_time_min + " mins";
+            document.getElementById('res-flood').innerText = data.scenarios.flood_risk_probability + "% Risk";
+
+            if (data.alerts && data.alerts.some(x => x)) {
+                alert(data.alerts.filter(x => x).join("\n"));
+            }
+        }
+    } catch (e) {
+        alert("Simulation failed."); console.error(e);
+    } finally {
+        btn.innerText = "Run Simulation";
+        btn.disabled = false;
+    }
+}
+
+// Helper for CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // 2. TAB LOGIC
@@ -549,7 +642,7 @@ function displayTrafficData(data, isAutoUpdate = false) {
 
     if (scoreEl) scoreEl.textContent = congestionScore + '%';
     if (labelEl) labelEl.textContent = congestionLevel.label;
-    
+
     if (cardEl) {
         cardEl.className = 'card ' + congestionLevel.class;
     }
@@ -573,7 +666,7 @@ function displayTrafficData(data, isAutoUpdate = false) {
     const roadClassEl = document.getElementById('traffic-road-class');
     const roadClosureEl = document.getElementById('traffic-road-closure');
     const confidenceEl = document.getElementById('traffic-confidence');
-    
+
     if (roadClassEl) roadClassEl.textContent = traffic.roadClass;
     if (roadClosureEl) roadClosureEl.textContent = traffic.roadClosure ? '⚠️ Yes' : '✅ No';
     if (confidenceEl) confidenceEl.textContent = traffic.confidence + '%';
@@ -582,7 +675,7 @@ function displayTrafficData(data, isAutoUpdate = false) {
     const locLatEl = document.getElementById('traffic-loc-lat');
     const locLonEl = document.getElementById('traffic-loc-lon');
     const coordCountEl = document.getElementById('traffic-coord-count');
-    
+
     if (locLatEl) locLatEl.textContent = location.latitude;
     if (locLonEl) locLonEl.textContent = location.longitude;
     if (coordCountEl) coordCountEl.textContent = data.coordinates.length + ' points';
@@ -624,7 +717,7 @@ function updateTrafficLastRefreshTime() {
     const timeString = now.toLocaleTimeString();
     const statusText = isTrafficAutoRefreshEnabled ? 'Monitoring - Last changed' : 'Last updated';
     const el = document.getElementById('traffic-last-updated');
-    
+
     if (el) {
         el.textContent = `${statusText}: ${timeString}`;
     }
@@ -655,7 +748,7 @@ function formatTrafficTime(seconds) {
 function showTrafficError(message) {
     const error = document.getElementById('traffic-error');
     const results = document.getElementById('traffic-results');
-    
+
     if (error) {
         error.textContent = '❌ ' + message;
         error.style.display = 'block';
@@ -702,17 +795,17 @@ function initRouteTrafficAnalysis() {
 
 function setupMapClickHandler() {
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    
+
     handler.setInputAction((click) => {
         // Convert click position to cartesian
         const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
-        
+
         if (cartesian) {
             // Convert to lat/lon
             const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
             const lat = Cesium.Math.toDegrees(cartographic.latitude);
             const lon = Cesium.Math.toDegrees(cartographic.longitude);
-            
+
             addRoutePoint(lat, lon);
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -725,10 +818,10 @@ function addRoutePoint(lat, lon) {
     }
 
     routePoints.push({ lat, lon });
-    
+
     // Add marker to map
     const pointLabel = routePoints.length === 1 ? 'A' : 'B';
-    const pointColor = routePoints.length === 1 
+    const pointColor = routePoints.length === 1
         ? Cesium.Color.fromCssColorString('#10b981') // Green for start
         : Cesium.Color.fromCssColorString('#ef4444'); // Red for end
 
@@ -764,7 +857,7 @@ function createMarkerCanvas(label, color) {
     ctx.beginPath();
     ctx.arc(24, 24, 20, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // Draw point at bottom
     ctx.beginPath();
     ctx.moveTo(24, 44);
@@ -829,11 +922,11 @@ function updateRoutePointsUI() {
 
 function clearRoutePoints() {
     routePoints = [];
-    
+
     // Remove markers from map
     routeMarkers.forEach(marker => viewer.entities.remove(marker));
     routeMarkers = [];
-    
+
     // Remove line from map
     if (routeLine) {
         viewer.entities.remove(routeLine);
@@ -843,7 +936,7 @@ function clearRoutePoints() {
     // Reset UI
     const pointAEl = document.getElementById('point-a-coords');
     const pointBEl = document.getElementById('point-b-coords');
-    
+
     if (pointAEl) pointAEl.textContent = 'Not selected';
     if (pointBEl) pointBEl.textContent = 'Not selected';
 
@@ -874,18 +967,18 @@ async function analyzeRouteTraffic() {
     try {
         // Calculate intermediate points along the route (every ~2km)
         const checkpoints = generateRouteCheckpoints(routePoints[0], routePoints[1], 5);
-        
+
         // Fetch traffic data for all checkpoints
-        const trafficPromises = checkpoints.map(point => 
+        const trafficPromises = checkpoints.map(point =>
             fetch(`${API_BASE}/traffic/?lat=${point.lat}&lon=${point.lon}`)
                 .then(res => res.json())
                 .catch(err => ({ error: true }))
         );
 
         const trafficDataArray = await Promise.all(trafficPromises);
-        
+
         // Filter out errors and extract valid traffic data
-        const validData = trafficDataArray.filter(data => 
+        const validData = trafficDataArray.filter(data =>
             data.status === 'success' && data.traffic && data.traffic.currentSpeed
         );
 
@@ -928,7 +1021,7 @@ async function analyzeRouteTraffic() {
 
 function generateRouteCheckpoints(start, end, numPoints) {
     const checkpoints = [start];
-    
+
     for (let i = 1; i < numPoints - 1; i++) {
         const ratio = i / (numPoints - 1);
         checkpoints.push({
@@ -936,7 +1029,7 @@ function generateRouteCheckpoints(start, end, numPoints) {
             lon: start.lon + (end.lon - start.lon) * ratio
         });
     }
-    
+
     checkpoints.push(end);
     return checkpoints;
 }
@@ -946,10 +1039,10 @@ function calculateDistance(point1, point2) {
     const R = 6371; // Earth's radius in km
     const dLat = (point2.lat - point1.lat) * Math.PI / 180;
     const dLon = (point2.lon - point1.lon) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
 
@@ -958,9 +1051,9 @@ function displayRouteResults(results) {
     if (!resultsEl) return;
 
     // Update congestion display
-    document.getElementById('route-avg-congestion').textContent = 
+    document.getElementById('route-avg-congestion').textContent =
         Math.round(results.avgCongestion) + '%';
-    
+
     const level = getTrafficCongestionLevel(results.avgCongestion);
     const levelEl = document.getElementById('route-congestion-level');
     if (levelEl) {
@@ -970,13 +1063,13 @@ function displayRouteResults(results) {
     }
 
     // Update metrics
-    document.getElementById('route-distance').textContent = 
+    document.getElementById('route-distance').textContent =
         results.distance.toFixed(2) + ' km';
-    document.getElementById('route-time').textContent = 
+    document.getElementById('route-time').textContent =
         formatRouteTime(results.estimatedTime);
-    document.getElementById('route-avg-speed').textContent = 
+    document.getElementById('route-avg-speed').textContent =
         Math.round(results.avgSpeed) + ' km/h';
-    document.getElementById('route-checkpoints').textContent = 
+    document.getElementById('route-checkpoints').textContent =
         results.checkpoints;
 
     resultsEl.style.display = 'block';
