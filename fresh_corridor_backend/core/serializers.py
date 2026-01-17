@@ -41,3 +41,40 @@ class CitizenReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = CitizenReport
         fields = '__all__'
+
+# --- Auth Serializers ---
+from django.contrib.auth.models import User
+from .models import UserProfile
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['role']
+
+class UserSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer(read_only=True)
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'profile']
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+class SignupSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'role']
+
+    def create(self, validated_data):
+        role = validated_data.pop('role')
+        password = validated_data.pop('password')
+        user = User.objects.create_user(**validated_data) # create_user handles hashing
+        user.set_password(password)
+        user.save()
+        UserProfile.objects.create(user=user, role=role)
+        return user

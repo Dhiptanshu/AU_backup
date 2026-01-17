@@ -836,6 +836,48 @@ function showTrafficUpdateNotification() {
 
 // Initialize traffic monitoring when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // RBAC: Check Login
+    const role = localStorage.getItem('user_role');
+    if (!role) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    // RBAC: Hide Tabs based on Role
+    // Roles: PLANNER, AGRICULTURIST, HEALTH, CITIZEN
+    // Tabs (Ids): btn-urban (Planner), btn-agri (Agri), btn-health (Health), btn-citizen (Citizen)
+
+    const tabs = {
+        'urban': document.getElementById('btn-urban'),
+        'agri': document.getElementById('btn-agri'),
+        'health': document.getElementById('btn-health'),
+        'citizen': document.getElementById('btn-citizen')
+    };
+
+    if (role === 'PLANNER') {
+        // All visible
+    } else if (role === 'AGRICULTURIST') {
+        tabs.urban.style.display = 'none';
+        tabs.health.style.display = 'none';
+        // Auto-switch to Agri
+        switchTab('agri');
+    } else if (role === 'HEALTH') {
+        tabs.urban.style.display = 'none';
+        tabs.agri.style.display = 'none';
+        // Auto-switch to Health
+        switchTab('health');
+    } else if (role === 'CITIZEN') {
+        tabs.urban.style.display = 'none';
+        tabs.agri.style.display = 'none';
+        tabs.health.style.display = 'none';
+        // Auto-switch to Citizen
+        switchTab('citizen');
+    }
+
+    initMap();
+    initThreeJS();
+
+    // Default load actions...
     initTrafficMonitoring();
     initRouteTrafficAnalysis();
 });

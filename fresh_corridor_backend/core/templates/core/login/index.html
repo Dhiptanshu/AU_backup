@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoAnushasan AI - Future Selection</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/login_assets/style.css' %}">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+
+<body id="selection-body">
+    <!-- Futuristic Overlay Elements -->
+    <div class="ai-scanner"></div>
+    <div class="ai-grid-bg"></div>
+    <div class="ai-mesh"></div>
+    <div class="bg-overlay"></div>
+
+    <div class="blob blob-1" style="background: var(--color-primary); position: fixed; top: -10%; left: -10%;"></div>
+    <div class="blob blob-2"
+        style="background: var(--citizen-accent); position: fixed; bottom: -10%; right: -10%; animation-delay: -5s;">
+    </div>
+    <div class="blob blob-3"
+        style="position: fixed; top: 30%; right: -10%; width: 50vw; height: 50vw; background: var(--planner-accent); filter: blur(100px); opacity: 0.1; z-index: -1;">
+    </div>
+
+    <!-- Theme Toggler -->
+    <div class="theme-toggler">
+        <span class="material-icons-sharp active">light_mode</span>
+        <span class="material-icons-sharp">dark_mode</span>
+    </div>
+
+    <div class="landing-container" id="mainContent">
+        <header style="margin-bottom: 5rem; position: relative;">
+            <div
+                style="display: inline-block; padding: 6px 14px; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--color-primary-light); border-radius: 50px; font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; color: var(--color-primary); margin-bottom: 1rem; text-transform: uppercase;">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <div class="ai-pulse"></div> Powered by Neural Core
+                </span>
+            </div>
+            <h1
+                style="font-size: clamp(3rem, 8vw, 5rem); line-height: 1; font-weight: 800; text-transform: uppercase; letter-spacing: -2px; margin-bottom: 1rem;">
+                <span style="color: var(--color-dark)">Geo</span><span class="primary-text"
+                    style="background: linear-gradient(90deg, #6366f1, #a855f7, #6366f1); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 3s linear infinite;">Anushasan</span>
+            </h1>
+            <p class="subtitle" style="font-size: 1.2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                Intelligence-driven urban management system. <br>
+                <span style="opacity: 0.7; font-weight: 400;">Select your operational neural interface to begin
+                    synchronization.</span>
+            </p>
+        </header>
+
+        <div class="role-grid"
+            style="perspective: 1000px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem;">
+            <!-- Farmer Card -->
+            <div class="role-card farmer" onclick="selectRole('farmer')">
+                <div class="ai-badge">
+                    <div class="ai-pulse"></div> Neural
+                </div>
+                <div class="img-container"
+                    style="width: 120px; height: 120px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 15px 15px rgba(16, 185, 129, 0.2));">
+                    <img src="{% static 'core/login_assets/farmer.png' %}" alt="Farmer"
+                        style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <h2 style="font-size: 1.4rem; font-weight: 600;">Agriculturalist</h2>
+                <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">Precision Crop Intelligence</p>
+                <div class="accent-bar" style="background: var(--farmer-accent);"></div>
+            </div>
+
+            <!-- Health Card -->
+            <div class="role-card health" onclick="selectRole('health')">
+                <div class="ai-badge">
+                    <div class="ai-pulse"></div> Secure
+                </div>
+                <div class="img-container"
+                    style="width: 120px; height: 120px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 15px 15px rgba(239, 68, 68, 0.2));">
+                    <img src="{% static 'core/login_assets/health.png' %}" alt="Health Official"
+                        style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <h2 style="font-size: 1.4rem; font-weight: 600;">Health Official</h2>
+                <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">Epidemic Neural Vectors</p>
+                <div class="accent-bar" style="background: var(--health-accent);"></div>
+            </div>
+
+            <!-- Citizen Card -->
+            <div class="role-card resident" onclick="selectRole('resident')">
+                <div class="ai-badge">
+                    <div class="ai-pulse"></div> Connected
+                </div>
+                <div class="img-container"
+                    style="width: 120px; height: 120px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 15px 15px rgba(59, 130, 246, 0.2));">
+                    <img src="{% static 'core/login_assets/resident.png' %}" alt="Citizen"
+                        style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <h2 style="font-size: 1.4rem; font-weight: 600;">Citizen</h2>
+                <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">Social Fabric Sync</p>
+                <div class="accent-bar" style="background: var(--citizen-accent);"></div>
+            </div>
+
+            <!-- Planner Card -->
+            <div class="role-card planner" onclick="selectRole('planner')">
+                <div class="ai-badge">
+                    <div class="ai-pulse"></div> Admin
+                </div>
+                <div class="img-container"
+                    style="width: 120px; height: 120px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 15px 15px rgba(245, 158, 11, 0.2));">
+                    <img src="{% static 'core/login_assets/planner.png' %}" alt="Planner"
+                        style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <h2 style="font-size: 1.4rem; font-weight: 600;">Planner</h2>
+                <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">Core Resource Planning</p>
+                <div class="accent-bar" style="background: var(--planner-accent);"></div>
+            </div>
+        </div>
+
+        <footer
+            style="margin-top: 6rem; opacity: 0.5; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 600;">
+            SYSTEM STATUS: <span style="color: var(--farmer-accent)">OPTIMAL</span> // PROTOCOL v4.0.2
+        </footer>
+    </div>
+
+    <script src="{% static 'core/login_assets/main.js' %}"></script>
+    <script>
+        // Integration for theme toggler
+        const toggler = document.querySelector('.theme-toggler');
+        if (toggler) {
+            toggler.addEventListener('click', () => {
+                document.body.classList.toggle('dark-theme-variables');
+                toggler.querySelectorAll('span').forEach(span => span.classList.toggle('active'));
+                const isDark = document.body.classList.contains('dark-theme-variables');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            });
+        }
+
+        // Initial theme load
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme-variables');
+            if (toggler) {
+                toggler.querySelector('span:nth-child(1)').classList.remove('active');
+                toggler.querySelector('span:nth-child(2)').classList.add('active');
+            }
+        }
+    </script>
+</body>
+
+</html>

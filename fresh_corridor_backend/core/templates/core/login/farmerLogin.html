@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agriculturalist Sync - GeoAnushasan AI</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
+    <!-- External CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/login_assets/login_styles.css' %}">
+    <link rel="stylesheet" href="{% static 'core/login_assets/style.css' %}">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+        }
+
+        .login-wrapper {
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.3);
+        }
+
+        .illustration-section {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .ai-status {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--farmer-accent);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body id="login-body">
+    <div class="ai-grid-bg"></div>
+    <div class="ai-mesh"></div>
+    <div class="ai-scanner"></div>
+    <div class="blob blob-1" style="background: var(--farmer-accent); opacity: 0.1;"></div>
+
+    <div class="ai-status">
+        <div class="ai-pulse" style="background: var(--farmer-accent);"></div>
+        Secure Neural Link: Agriculturalist
+    </div>
+
+    <!-- Theme Toggler -->
+    <div class="theme-toggler">
+        <span class="material-icons-sharp active">light_mode</span>
+        <span class="material-icons-sharp">dark_mode</span>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="illustration-section">
+            <img src="{% static 'core/login_assets/farmer.png' %}" alt="illustration" class="illustration-bg"
+                style="filter: drop-shadow(0 20px 40px rgba(16, 185, 129, 0.3));">
+        </div>
+
+        <div class="form-section container" id="main-container">
+            <div class="forms-container">
+                <div class="form-box login">
+                    <div class="logo">
+                        <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=200&h=200&auto=format&fit=crop"
+                            alt="logo">
+                        <h2 style="font-weight: 800; letter-spacing: -1px;">Geo<span class="primary-text"
+                                style="background: none; -webkit-text-fill-color: var(--color-danger); animation: none;">Anushasan</span>
+                        </h2>
+                    </div>
+                    <h1 style="font-weight: 700; font-size: 1.8rem;">Initialize Sync</h1>
+                    <p style="opacity: 0.7;">Enter agricultural credentials for environment sync.</p>
+                    <form id="login-form">
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" placeholder="eg. agriculturalist@gmail.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" style="background: var(--farmer-accent);">Login</button>
+                        <p class="toggle-text">New terminal? <span id="to-signup">Signup</span></p>
+                        <a href="{% url 'login_index' %}"
+                            style="display: block; text-align: center; margin-top: 1.5rem; color: var(--color-info-dark); text-decoration: none; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">←
+                            Portal Hub</a>
+                    </form>
+                </div>
+
+                <div class="form-box signup">
+                    <div class="logo">
+                        <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=200&h=200&auto=format&fit=crop"
+                            alt="logo">
+                        <h2 style="font-weight: 800; letter-spacing: -1px;">Geo<span class="primary-text"
+                                style="background: none; -webkit-text-fill-color: var(--color-danger); animation: none;">Anushasan</span>
+                        </h2>
+                    </div>
+                    <h1 style="font-weight: 700;">Open Neural Port</h1>
+                    <p style="opacity: 0.7;">Join the precision ecosystem.</p>
+                    <form id="signup-form">
+                        <div class="input-group"><label>Operational Name</label><input type="text"
+                                placeholder="Agriculturalist Alpha" required></div>
+                        <div class="input-group"><label>Neural Port / Email</label><input type="email"
+                                placeholder="bio@geo.ai" required></div>
+                        <div class="input-group"><label>Password</label><input type="password" placeholder="••••••••"
+                                required></div>
+                        <button type="submit" style="background: var(--farmer-accent);">Create Identity</button>
+                        <p class="toggle-text">Existing Link? <span id="to-login">Sync Now</span></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'core/login_assets/login_script.js' %}"></script>
+</body>
+
+</html>

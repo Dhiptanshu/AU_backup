@@ -6,8 +6,14 @@ from .models import CityZone, WeatherLog, Hospital, TrafficStats, AgriSupply, Ci
 from .services.simulation_service import SimulationService
 from .serializers import (
     CityZoneSerializer, WeatherLogSerializer, HospitalSerializer, 
-    TrafficStatsSerializer, AgriSupplySerializer, CitizenReportSerializer, HealthStatsSerializer
+    TrafficStatsSerializer, AgriSupplySerializer, CitizenReportSerializer, HealthStatsSerializer,
+    LoginSerializer, SignupSerializer, UserSerializer
 )
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
 import requests
 import os
 from dotenv import load_dotenv
@@ -18,6 +24,65 @@ load_dotenv()
 # --- Dashboard View ---
 def dashboard(request):
     return render(request, 'core/index.html')
+
+def login_index(request):
+    return render(request, 'core/login/index.html')
+
+def login_role(request, role):
+    template_map = {
+        'planner': 'plannerLogin.html',
+        'farmer': 'farmerLogin.html',
+        'health': 'healthLogin.html',
+        'resident': 'residentLogin.html'
+    }
+    template = template_map.get(role)
+    if template:
+        return render(request, f'core/login/{template}')
+    return render(request, 'core/login/index.html')
+
+# --- Auth APIs ---
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def auth_login(request):
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        username_input = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+
+        # Support Email Login
+        if '@' in username_input:
+            try:
+                user_obj = User.objects.get(email=username_input)
+                username_input = user_obj.username
+            except User.DoesNotExist:
+                pass # Will fail in authenticate
+
+        user = authenticate(username=username_input, password=password)
+        if user:
+            login(request, user)
+            return Response({
+                'message': 'Login Successful',
+                'user': UserSerializer(user).data,
+                'role': user.profile.role
+            })
+        return Response({'error': 'Invalid credentials'}, status=400)
+    return Response(serializer.errors, status=400)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def auth_signup(request):
+    serializer = SignupSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        login(request, user)
+        return Response({
+            'message': 'Signup Successful',
+            'user': UserSerializer(user).data,
+            'role': user.profile.role
+        }, status=201)
+    return Response(serializer.errors, status=400)
 
 # --- Tab 1: Planner View ---
 class PlannerViewSet(viewsets.ModelViewSet):
