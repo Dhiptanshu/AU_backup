@@ -50,8 +50,83 @@
                 <h2 style="margin:0;">Urban Digital Twin</h2>
                 <div style="font-size:0.9rem; color:var(--text-muted);">Real-time simulation environment</div>
             </div>
-            <div class="card" style="padding:0; border:none; height:600px;">
+            <div class="card" style="padding:0; border:none; height:600px; position: relative;">
                 <div id="cesiumContainer"></div>
+                
+                <!-- Route Traffic Analysis Panel -->
+                <div id="route-analysis-panel"
+                    style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.95); padding: 1.2rem; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999;">
+                    <h3 style="color:#333; margin-bottom:1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        🗺️ Route Traffic Analysis
+                    </h3>
+                    
+                    <div id="route-instructions" style="background: #f0f9ff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #0369a1; border-left: 3px solid #0284c7;">
+                        <strong>📍 Click on map to select points</strong><br>
+                        <span style="font-size: 0.8rem;">Select start and end points to analyze traffic congestion along the route.</span>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem; background: #f8fafc; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <span style="width: 24px; height: 24px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.75rem;">A</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: #64748b;">Start Point</div>
+                                <div id="point-a-coords" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Not selected</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem; background: #f8fafc; border-radius: 6px;">
+                            <span style="width: 24px; height: 24px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.75rem;">B</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: #64748b;">End Point</div>
+                                <div id="point-b-coords" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Not selected</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <button id="analyze-route-btn" class="btn-primary" style="flex: 1; justify-content: center; font-size: 0.9rem;" disabled>
+                            Analyze Traffic
+                        </button>
+                        <button id="clear-route-btn" class="btn-secondary" style="padding: 0.6rem 1rem; font-size: 0.9rem;">
+                            Clear
+                        </button>
+                    </div>
+
+                    <div id="route-results" style="display: none;">
+                        <div style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
+                            <div style="text-align: center; margin-bottom: 1rem;">
+                                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.3rem;">Average Congestion</div>
+                                <div id="route-avg-congestion" style="font-size: 2.5rem; font-weight: bold; color: var(--primary-color);">--</div>
+                                <div id="route-congestion-level" style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; margin-top: 0.3rem;">--</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.85rem;">
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Distance</div>
+                                    <div id="route-distance" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Est. Time</div>
+                                    <div id="route-time" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Avg Speed</div>
+                                    <div id="route-avg-speed" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Check Points</div>
+                                    <div id="route-checkpoints" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="route-loading" style="display: none; text-align: center; padding: 1rem; border-top: 2px solid #e2e8f0; margin-top: 1rem;">
+                        <div class="spinner" style="width: 30px; height: 30px; margin: 0 auto 0.5rem;"></div>
+                        <div style="font-size: 0.85rem; color: #64748b;">Analyzing route...</div>
+                    </div>
+
+                    <div id="route-error" style="display: none; padding: 0.8rem; background: #fee; border: 1px solid #fcc; color: #c33; border-radius: 6px; margin-top: 1rem; font-size: 0.85rem;"></div>
+                </div>
+
                 <!-- Overlay Simulation Controls -->
                 <div
                     style="position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 1.2rem; border-radius: 8px; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999;">
@@ -71,6 +146,122 @@
                         • Amb. Delay: +12 mins<br>
                         • Spoilage Risk: High
                     </div>
+                </div>
+            </div>
+
+            <!-- Traffic Congestion Monitor -->
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--text-main);">🚦 Real-Time Traffic Congestion Monitor</h3>
+                
+                <div class="traffic-controls card" style="margin-bottom: 1.5rem; padding: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Latitude:</label>
+                            <input type="text" id="traffic-latitude" value="28.6139" 
+                                   style="width: 100%; padding: 0.6rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.95rem;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Longitude:</label>
+                            <input type="text" id="traffic-longitude" value="77.2090" 
+                                   style="width: 100%; padding: 0.6rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.95rem;">
+                        </div>
+                        <button id="fetchTrafficBtn" class="btn-primary" style="padding: 0.6rem 1.5rem;">
+                            Fetch Traffic Data
+                        </button>
+                        <button id="autoRefreshTrafficBtn" class="btn-secondary" style="padding: 0.6rem 1.5rem;">
+                            🔄 Monitor: OFF
+                        </button>
+                    </div>
+                </div>
+
+                <div id="traffic-loading" class="card" style="text-align: center; padding: 2rem; display: none;">
+                    <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                    <p>Loading traffic data...</p>
+                </div>
+
+                <div id="traffic-error" class="card" style="background: #fee; border: 2px solid #fcc; color: #c33; padding: 1rem; display: none;"></div>
+
+                <div id="traffic-results" style="display: none;">
+                    <div class="dashboard-grid">
+                        <!-- Congestion Score Card -->
+                        <div class="card" id="traffic-congestion-card" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 2rem; text-align: center;">
+                            <h3 style="margin: 0 0 1rem 0; opacity: 0.9;">Congestion Score</h3>
+                            <div id="traffic-congestion-score" style="font-size: 4rem; font-weight: bold; margin: 1rem 0;">--</div>
+                            <div id="traffic-congestion-label" style="font-size: 1.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Loading...</div>
+                            <div style="width: 100%; height: 20px; background: rgba(255,255,255,0.3); border-radius: 10px; margin-top: 1.5rem; overflow: hidden;">
+                                <div id="traffic-progress-fill" style="height: 100%; border-radius: 10px; transition: width 0.5s ease;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Current Speed -->
+                        <div class="card">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 2.5rem;">🚗</div>
+                                <div style="flex: 1;">
+                                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.3rem;">Current Speed</div>
+                                    <div id="traffic-current-speed" style="font-size: 1.8rem; font-weight: bold; color: var(--text-main);">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Free Flow Speed -->
+                        <div class="card">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 2.5rem;">⚡</div>
+                                <div style="flex: 1;">
+                                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.3rem;">Free Flow Speed</div>
+                                    <div id="traffic-free-flow-speed" style="font-size: 1.8rem; font-weight: bold; color: var(--text-main);">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Travel Time -->
+                        <div class="card">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 2.5rem;">⏱️</div>
+                                <div style="flex: 1;">
+                                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.3rem;">Current Travel Time</div>
+                                    <div id="traffic-current-time" style="font-size: 1.8rem; font-weight: bold; color: var(--text-main);">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Road Info -->
+                        <div class="card">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--text-main);">Road Information</h4>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Road Class:</span>
+                                <span id="traffic-road-class" style="color: var(--text-main);">--</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Road Closure:</span>
+                                <span id="traffic-road-closure" style="color: var(--text-main);">--</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Data Confidence:</span>
+                                <span id="traffic-confidence" style="color: var(--text-main);">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Location Info -->
+                        <div class="card">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--text-main);">Location Details</h4>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Latitude:</span>
+                                <span id="traffic-loc-lat" style="color: var(--text-main);">--</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Longitude:</span>
+                                <span id="traffic-loc-lon" style="color: var(--text-main);">--</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                <span style="font-weight: 600; color: var(--text-muted);">Coordinates:</span>
+                                <span id="traffic-coord-count" style="color: var(--text-main);">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="traffic-last-updated" style="text-align: center; padding: 1rem; margin-top: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9rem; color: #666;"></div>
                 </div>
             </div>
         </div>

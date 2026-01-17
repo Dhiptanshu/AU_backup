@@ -438,3 +438,562 @@ function openStationModal(stationName) {
 function closeModal() {
     document.getElementById('station-modal').classList.remove('active');
 }
+
+// ======================================
+// TRAFFIC CONGESTION MONITORING
+// ======================================
+
+const TRAFFIC_API_URL = '/api/traffic/';
+let trafficAutoRefreshInterval = null;
+let isTrafficAutoRefreshEnabled = false;
+let previousTrafficData = null;
+const TRAFFIC_POLL_INTERVAL = 10000; // 10 seconds
+
+// Initialize traffic monitoring event listeners
+function initTrafficMonitoring() {
+    const fetchBtn = document.getElementById('fetchTrafficBtn');
+    const autoRefreshBtn = document.getElementById('autoRefreshTrafficBtn');
+    const latInput = document.getElementById('traffic-latitude');
+    const lonInput = document.getElementById('traffic-longitude');
+
+    if (fetchBtn) {
+        fetchBtn.addEventListener('click', () => fetchTrafficData(true));
+    }
+
+    if (autoRefreshBtn) {
+        autoRefreshBtn.addEventListener('click', toggleTrafficAutoRefresh);
+    }
+
+    if (latInput) {
+        latInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchTrafficData(true);
+        });
+    }
+
+    if (lonInput) {
+        lonInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchTrafficData(true);
+        });
+    }
+}
+
+async function fetchTrafficData(showLoading = false) {
+    const lat = document.getElementById('traffic-latitude').value.trim();
+    const lon = document.getElementById('traffic-longitude').value.trim();
+
+    if (!lat || !lon) {
+        showTrafficError('Please enter both latitude and longitude');
+        return;
+    }
+
+    const loading = document.getElementById('traffic-loading');
+    const error = document.getElementById('traffic-error');
+    const results = document.getElementById('traffic-results');
+
+    if (showLoading && loading) {
+        loading.style.display = 'block';
+        error.style.display = 'none';
+        results.style.display = 'none';
+    }
+
+    try {
+        const response = await fetch(`${TRAFFIC_API_URL}?lat=${lat}&lon=${lon}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            if (hasTrafficDataChanged(data)) {
+                displayTrafficData(data, !showLoading);
+                previousTrafficData = data;
+            }
+        } else {
+            showTrafficError(data.message || 'Failed to fetch traffic data');
+        }
+    } catch (err) {
+        if (showLoading) {
+            showTrafficError('Network error: ' + err.message);
+        }
+    } finally {
+        if (showLoading && loading) {
+            loading.style.display = 'none';
+        }
+    }
+}
+
+function hasTrafficDataChanged(newData) {
+    if (!previousTrafficData) return true;
+
+    const oldTraffic = previousTrafficData.traffic;
+    const newTraffic = newData.traffic;
+
+    return (
+        oldTraffic.currentSpeed !== newTraffic.currentSpeed ||
+        oldTraffic.freeFlowSpeed !== newTraffic.freeFlowSpeed ||
+        oldTraffic.currentTravelTime !== newTraffic.currentTravelTime ||
+        oldTraffic.congestionScore !== newTraffic.congestionScore ||
+        oldTraffic.roadClosure !== newTraffic.roadClosure
+    );
+}
+
+function displayTrafficData(data, isAutoUpdate = false) {
+    const traffic = data.traffic;
+    const location = data.location;
+
+    // Congestion score and level
+    const congestionScore = traffic.congestionScore;
+    const congestionLevel = getTrafficCongestionLevel(congestionScore);
+
+    const scoreEl = document.getElementById('traffic-congestion-score');
+    const labelEl = document.getElementById('traffic-congestion-label');
+    const cardEl = document.getElementById('traffic-congestion-card');
+    const progressEl = document.getElementById('traffic-progress-fill');
+
+    if (scoreEl) scoreEl.textContent = congestionScore + '%';
+    if (labelEl) labelEl.textContent = congestionLevel.label;
+    
+    if (cardEl) {
+        cardEl.className = 'card ' + congestionLevel.class;
+    }
+
+    if (progressEl) {
+        progressEl.style.width = congestionScore + '%';
+        progressEl.style.background = 'rgba(255,255,255,0.8)';
+    }
+
+    // Speed stats
+    const currentSpeedEl = document.getElementById('traffic-current-speed');
+    const freeFlowSpeedEl = document.getElementById('traffic-free-flow-speed');
+    if (currentSpeedEl) currentSpeedEl.textContent = traffic.currentSpeed + ' km/h';
+    if (freeFlowSpeedEl) freeFlowSpeedEl.textContent = traffic.freeFlowSpeed + ' km/h';
+
+    // Time stats
+    const currentTimeEl = document.getElementById('traffic-current-time');
+    if (currentTimeEl) currentTimeEl.textContent = formatTrafficTime(traffic.currentTravelTime);
+
+    // Road information
+    const roadClassEl = document.getElementById('traffic-road-class');
+    const roadClosureEl = document.getElementById('traffic-road-closure');
+    const confidenceEl = document.getElementById('traffic-confidence');
+    
+    if (roadClassEl) roadClassEl.textContent = traffic.roadClass;
+    if (roadClosureEl) roadClosureEl.textContent = traffic.roadClosure ? '⚠️ Yes' : '✅ No';
+    if (confidenceEl) confidenceEl.textContent = traffic.confidence + '%';
+
+    // Location
+    const locLatEl = document.getElementById('traffic-loc-lat');
+    const locLonEl = document.getElementById('traffic-loc-lon');
+    const coordCountEl = document.getElementById('traffic-coord-count');
+    
+    if (locLatEl) locLatEl.textContent = location.latitude;
+    if (locLonEl) locLonEl.textContent = location.longitude;
+    if (coordCountEl) coordCountEl.textContent = data.coordinates.length + ' points';
+
+    // Update last updated time
+    updateTrafficLastRefreshTime();
+
+    // Show results
+    const results = document.getElementById('traffic-results');
+    if (results) results.style.display = 'block';
+}
+
+function toggleTrafficAutoRefresh() {
+    isTrafficAutoRefreshEnabled = !isTrafficAutoRefreshEnabled;
+    const btn = document.getElementById('autoRefreshTrafficBtn');
+
+    if (isTrafficAutoRefreshEnabled) {
+        if (btn) {
+            btn.textContent = '🔄 Monitor: ON';
+            btn.classList.add('active');
+        }
+        fetchTrafficData(true);
+        trafficAutoRefreshInterval = setInterval(() => fetchTrafficData(false), TRAFFIC_POLL_INTERVAL);
+    } else {
+        if (btn) {
+            btn.textContent = '🔄 Monitor: OFF';
+            btn.classList.remove('active');
+        }
+        if (trafficAutoRefreshInterval) {
+            clearInterval(trafficAutoRefreshInterval);
+            trafficAutoRefreshInterval = null;
+        }
+        previousTrafficData = null;
+    }
+}
+
+function updateTrafficLastRefreshTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    const statusText = isTrafficAutoRefreshEnabled ? 'Monitoring - Last changed' : 'Last updated';
+    const el = document.getElementById('traffic-last-updated');
+    
+    if (el) {
+        el.textContent = `${statusText}: ${timeString}`;
+    }
+}
+
+function getTrafficCongestionLevel(score) {
+    if (score < 20) {
+        return { label: 'Low Traffic', class: 'level-low' };
+    } else if (score < 40) {
+        return { label: 'Moderate Traffic', class: 'level-moderate' };
+    } else if (score < 60) {
+        return { label: 'High Congestion', class: 'level-high' };
+    } else {
+        return { label: 'Severe Congestion', class: 'level-severe' };
+    }
+}
+
+function formatTrafficTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+
+    if (minutes > 0) {
+        return `${minutes}m ${secs}s`;
+    }
+    return `${secs}s`;
+}
+
+function showTrafficError(message) {
+    const error = document.getElementById('traffic-error');
+    const results = document.getElementById('traffic-results');
+    
+    if (error) {
+        error.textContent = '❌ ' + message;
+        error.style.display = 'block';
+    }
+    if (results) {
+        results.style.display = 'none';
+    }
+}
+
+// Initialize traffic monitoring when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initTrafficMonitoring();
+    initRouteTrafficAnalysis();
+});
+
+// ============================================
+// ROUTE TRAFFIC ANALYSIS - Interactive Map Selection
+// ============================================
+
+let routePoints = []; // Array to store 2 selected points
+let routeMarkers = []; // Array to store marker entities
+let routeLine = null; // Line entity connecting points
+
+function initRouteTrafficAnalysis() {
+    const analyzeBtn = document.getElementById('analyze-route-btn');
+    const clearBtn = document.getElementById('clear-route-btn');
+
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', analyzeRouteTraffic);
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearRoutePoints);
+    }
+
+    // Wait for Cesium viewer to be initialized
+    const checkViewer = setInterval(() => {
+        if (viewer && viewer.scene) {
+            clearInterval(checkViewer);
+            setupMapClickHandler();
+        }
+    }, 100);
+}
+
+function setupMapClickHandler() {
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    
+    handler.setInputAction((click) => {
+        // Convert click position to cartesian
+        const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+        
+        if (cartesian) {
+            // Convert to lat/lon
+            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            const lat = Cesium.Math.toDegrees(cartographic.latitude);
+            const lon = Cesium.Math.toDegrees(cartographic.longitude);
+            
+            addRoutePoint(lat, lon);
+        }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}
+
+function addRoutePoint(lat, lon) {
+    if (routePoints.length >= 2) {
+        // If already 2 points, clear and start over
+        clearRoutePoints();
+    }
+
+    routePoints.push({ lat, lon });
+    
+    // Add marker to map
+    const pointLabel = routePoints.length === 1 ? 'A' : 'B';
+    const pointColor = routePoints.length === 1 
+        ? Cesium.Color.fromCssColorString('#10b981') // Green for start
+        : Cesium.Color.fromCssColorString('#ef4444'); // Red for end
+
+    const marker = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+        billboard: {
+            image: createMarkerCanvas(pointLabel, routePoints.length === 1 ? '#10b981' : '#ef4444'),
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+    });
+
+    routeMarkers.push(marker);
+
+    // Update UI
+    updateRoutePointsUI();
+
+    // If both points selected, draw line and enable analyze button
+    if (routePoints.length === 2) {
+        drawRouteLine();
+        document.getElementById('analyze-route-btn').disabled = false;
+    }
+}
+
+function createMarkerCanvas(label, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    // Draw pin shape
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(24, 24, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw point at bottom
+    ctx.beginPath();
+    ctx.moveTo(24, 44);
+    ctx.lineTo(14, 54);
+    ctx.lineTo(34, 54);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, 24, 24);
+
+    return canvas;
+}
+
+function drawRouteLine() {
+    if (routePoints.length !== 2) return;
+
+    const positions = [
+        Cesium.Cartesian3.fromDegrees(routePoints[0].lon, routePoints[0].lat),
+        Cesium.Cartesian3.fromDegrees(routePoints[1].lon, routePoints[1].lat)
+    ];
+
+    routeLine = viewer.entities.add({
+        polyline: {
+            positions: positions,
+            width: 4,
+            material: new Cesium.PolylineDashMaterialProperty({
+                color: Cesium.Color.fromCssColorString('#3b82f6'),
+                dashLength: 16
+            }),
+            clampToGround: true
+        }
+    });
+}
+
+function updateRoutePointsUI() {
+    const pointAEl = document.getElementById('point-a-coords');
+    const pointBEl = document.getElementById('point-b-coords');
+
+    if (routePoints.length >= 1 && pointAEl) {
+        pointAEl.textContent = `${routePoints[0].lat.toFixed(4)}, ${routePoints[0].lon.toFixed(4)}`;
+    }
+
+    if (routePoints.length >= 2 && pointBEl) {
+        pointBEl.textContent = `${routePoints[1].lat.toFixed(4)}, ${routePoints[1].lon.toFixed(4)}`;
+    }
+
+    // Update instructions
+    const instructions = document.getElementById('route-instructions');
+    if (instructions && routePoints.length > 0) {
+        if (routePoints.length === 1) {
+            instructions.innerHTML = '<strong>📍 Select end point</strong><br><span style="font-size: 0.8rem;">Click on the map to select the destination point.</span>';
+        } else {
+            instructions.innerHTML = '<strong>✅ Route ready</strong><br><span style="font-size: 0.8rem;">Click "Analyze Traffic" to view congestion data.</span>';
+        }
+    }
+}
+
+function clearRoutePoints() {
+    routePoints = [];
+    
+    // Remove markers from map
+    routeMarkers.forEach(marker => viewer.entities.remove(marker));
+    routeMarkers = [];
+    
+    // Remove line from map
+    if (routeLine) {
+        viewer.entities.remove(routeLine);
+        routeLine = null;
+    }
+
+    // Reset UI
+    const pointAEl = document.getElementById('point-a-coords');
+    const pointBEl = document.getElementById('point-b-coords');
+    
+    if (pointAEl) pointAEl.textContent = 'Not selected';
+    if (pointBEl) pointBEl.textContent = 'Not selected';
+
+    const instructions = document.getElementById('route-instructions');
+    if (instructions) {
+        instructions.innerHTML = '<strong>📍 Click on map to select points</strong><br><span style="font-size: 0.8rem;">Select start and end points to analyze traffic congestion along the route.</span>';
+    }
+
+    document.getElementById('analyze-route-btn').disabled = true;
+    document.getElementById('route-results').style.display = 'none';
+    document.getElementById('route-error').style.display = 'none';
+}
+
+async function analyzeRouteTraffic() {
+    if (routePoints.length !== 2) return;
+
+    const loadingEl = document.getElementById('route-loading');
+    const resultsEl = document.getElementById('route-results');
+    const errorEl = document.getElementById('route-error');
+    const analyzeBtn = document.getElementById('analyze-route-btn');
+
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (resultsEl) resultsEl.style.display = 'none';
+    if (errorEl) errorEl.style.display = 'none';
+    if (analyzeBtn) analyzeBtn.disabled = true;
+
+    try {
+        // Calculate intermediate points along the route (every ~2km)
+        const checkpoints = generateRouteCheckpoints(routePoints[0], routePoints[1], 5);
+        
+        // Fetch traffic data for all checkpoints
+        const trafficPromises = checkpoints.map(point => 
+            fetch(`${API_BASE}/traffic/?lat=${point.lat}&lon=${point.lon}`)
+                .then(res => res.json())
+                .catch(err => ({ error: true }))
+        );
+
+        const trafficDataArray = await Promise.all(trafficPromises);
+        
+        // Filter out errors and extract valid traffic data
+        const validData = trafficDataArray.filter(data => 
+            data.status === 'success' && data.traffic && data.traffic.currentSpeed
+        );
+
+        if (validData.length === 0) {
+            throw new Error('No traffic data available for this route');
+        }
+
+        // Calculate aggregated metrics
+        const totalCongestion = validData.reduce((sum, data) => {
+            return sum + data.traffic.congestionScore;
+        }, 0);
+        const avgCongestion = totalCongestion / validData.length;
+
+        const totalSpeed = validData.reduce((sum, data) => sum + data.traffic.currentSpeed, 0);
+        const avgSpeed = totalSpeed / validData.length;
+
+        const distance = calculateDistance(routePoints[0], routePoints[1]);
+        const estimatedTime = (distance / avgSpeed) * 60; // minutes
+
+        // Display results
+        displayRouteResults({
+            avgCongestion,
+            avgSpeed,
+            distance,
+            estimatedTime,
+            checkpoints: validData.length
+        });
+
+    } catch (error) {
+        console.error('Route analysis error:', error);
+        if (errorEl) {
+            errorEl.textContent = error.message || 'Failed to analyze route traffic';
+            errorEl.style.display = 'block';
+        }
+    } finally {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (analyzeBtn) analyzeBtn.disabled = false;
+    }
+}
+
+function generateRouteCheckpoints(start, end, numPoints) {
+    const checkpoints = [start];
+    
+    for (let i = 1; i < numPoints - 1; i++) {
+        const ratio = i / (numPoints - 1);
+        checkpoints.push({
+            lat: start.lat + (end.lat - start.lat) * ratio,
+            lon: start.lon + (end.lon - start.lon) * ratio
+        });
+    }
+    
+    checkpoints.push(end);
+    return checkpoints;
+}
+
+function calculateDistance(point1, point2) {
+    // Haversine formula to calculate distance in km
+    const R = 6371; // Earth's radius in km
+    const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+    const dLon = (point2.lon - point1.lon) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function displayRouteResults(results) {
+    const resultsEl = document.getElementById('route-results');
+    if (!resultsEl) return;
+
+    // Update congestion display
+    document.getElementById('route-avg-congestion').textContent = 
+        Math.round(results.avgCongestion) + '%';
+    
+    const level = getTrafficCongestionLevel(results.avgCongestion);
+    const levelEl = document.getElementById('route-congestion-level');
+    if (levelEl) {
+        levelEl.textContent = level;
+        levelEl.className = '';
+        levelEl.style.color = getCongestionColor(results.avgCongestion);
+    }
+
+    // Update metrics
+    document.getElementById('route-distance').textContent = 
+        results.distance.toFixed(2) + ' km';
+    document.getElementById('route-time').textContent = 
+        formatRouteTime(results.estimatedTime);
+    document.getElementById('route-avg-speed').textContent = 
+        Math.round(results.avgSpeed) + ' km/h';
+    document.getElementById('route-checkpoints').textContent = 
+        results.checkpoints;
+
+    resultsEl.style.display = 'block';
+}
+
+function formatRouteTime(minutes) {
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = Math.round(minutes % 60);
+        return `${hours}h ${mins}m`;
+    }
+    return Math.round(minutes) + ' min';
+}
+
+function getCongestionColor(congestion) {
+    if (congestion < 25) return '#10b981'; // Green
+    if (congestion < 50) return '#f59e0b'; // Orange
+    if (congestion < 75) return '#f97316'; // Dark orange
+    return '#ef4444'; // Red
+}

@@ -52,6 +52,37 @@ class TrafficStats(models.Model):
     def __str__(self):
         return f"Traffic in {self.zone.name}"
 
+class RealTimeTraffic(models.Model):
+    """Store real-time traffic data from TomTom API"""
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Speed metrics
+    current_speed = models.IntegerField()  # km/h
+    free_flow_speed = models.IntegerField()  # km/h
+    
+    # Travel time metrics
+    current_travel_time = models.IntegerField()  # seconds
+    free_flow_travel_time = models.IntegerField()  # seconds
+    
+    # Congestion metrics
+    congestion_score = models.FloatField()  # 0-100 percentage
+    confidence = models.FloatField()  # API confidence level
+    
+    # Road information
+    road_class = models.CharField(max_length=20)
+    road_closure = models.BooleanField(default=False)
+    
+    # Optional zone relationship
+    zone = models.ForeignKey(CityZone, on_delete=models.SET_NULL, null=True, blank=True, related_name='realtime_traffic')
+    
+    class Meta:
+        ordering = ['-timestamp']
+        
+    def __str__(self):
+        return f"Traffic at ({self.latitude}, {self.longitude}) - {self.congestion_score}% congestion"
+
 class HealthStats(models.Model):
     zone = models.ForeignKey(CityZone, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)

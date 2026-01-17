@@ -2,11 +2,17 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import CityZone, WeatherLog, Hospital, TrafficStats, AgriSupply, CitizenReport, HealthStats
+from .models import CityZone, WeatherLog, Hospital, TrafficStats, AgriSupply, CitizenReport, HealthStats, RealTimeTraffic
 from .serializers import (
     CityZoneSerializer, WeatherLogSerializer, HospitalSerializer, 
     TrafficStatsSerializer, AgriSupplySerializer, CitizenReportSerializer, HealthStatsSerializer
 )
+import requests
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Dashboard View ---
 def dashboard(request):
@@ -145,3 +151,94 @@ def get_stations_api(request):
     
     stations = AQIService.get_stations()
     return Response(stations)
+
+# --- Traffic Monitoring ---
+def traffic_monitor(request):
+    """Render the traffic monitoring page"""
+    return render(request, 'core/traffic.html')
+
+@api_view(['GET'])
+def get_traffic_data(request):
+    """API endpoint to fetch real-time traffic data from TomTom"""
+    API_KEY = os.getenv('TOMTOM_API_KEY')
+    
+    if not API_KEY:
+        return Response({
+            'status': 'error',
+            'message': 'TomTom API key not configured. Please set TOMTOM_API_KEY in .env file'
+        }, status=500)
+    
+    try:
+        # Get coordinates from query parameters or use default (Connaught Place, New Delhi)
+        lat = request.GET.get('lat', '28.6139')
+        lon = request.GET.get('lon', '77.2090')
+        point = f"{lat},{lon}"
+
+        url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
+
+        params = {
+            "point": point,
+            "unit": "KMPH",
+            "key": API_KEY
+        }
+
+        r = requests.get(url, params=params)
+
+        if r.status_code == 200:
+            data = r.json()["flowSegmentData"]
+
+            current_speed = data["currentSpeed"]
+            free_flow_speed = data["freeFlowSpeed"]
+
+            congestion_score = round(
+                (1 - current_speed / free_flow_speed) * 100, 2
+            )
+
+            # Store in database
+            try:
+                RealTimeTraffic.objects.create(
+                    latitude=float(lat),
+                    longitude=float(lon),
+                    current_speed=current_speed,
+                    free_flow_speed=free_flow_speed,
+                    current_travel_time=data["currentTravelTime"],
+                    free_flow_travel_time=data["freeFlowTravelTime"],
+                    congestion_score=congestion_score,
+                    confidence=round(data["confidence"] * 100, 2),
+                    road_class=data["frc"],
+                    road_closure=data["roadClosure"]
+                )
+            except Exception as db_error:
+                print(f"Database save error: {db_error}")
+
+            response_data = {
+                "status": "success",
+                "location": {
+                    "latitude": lat,
+                    "longitude": lon
+                },
+                "traffic": {
+                    "currentSpeed": current_speed,
+                    "freeFlowSpeed": free_flow_speed,
+                    "currentTravelTime": data["currentTravelTime"],
+                    "freeFlowTravelTime": data["freeFlowTravelTime"],
+                    "confidence": round(data["confidence"] * 100, 2),
+                    "roadClosure": data["roadClosure"],
+                    "roadClass": data["frc"],
+                    "congestionScore": congestion_score
+                },
+                "coordinates": data["coordinates"]["coordinate"]
+            }
+
+            return Response(response_data)
+        else:
+            return Response({
+                "status": "error",
+                "message": f"Failed to fetch traffic data from TomTom API (Status: {r.status_code})"
+            }, status=r.status_code)
+
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": str(e)
+        }, status=500)

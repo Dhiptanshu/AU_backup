@@ -349,3 +349,51 @@ td {
     font-weight: 700;
     color: #0f172a;
 }
+
+/* Traffic Congestion Styles */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-secondary.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Traffic congestion level colors */
+.level-low {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+}
+
+.level-moderate {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+}
+
+.level-high {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+}
+
+.level-severe {
+    background: linear-gradient(135deg, #991b1b, #7f1d1d) !important;
+}

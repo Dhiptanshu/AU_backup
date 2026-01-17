@@ -39,21 +39,49 @@ The backend powers the API and data management for the platform.
 
 3.  Install dependencies:
     ```bash
-    pip install django djangorestframework
+    pip install django djangorestframework django-cors-headers requests python-dotenv
     ```
 
-4.  Initialize the database:
+4.  Configure environment variables:
+    ```bash
+    # Copy the template file
+    cp .env.template .env
+    # Edit .env and add your TomTom API key (for traffic monitoring)
+    # Get a free key at: https://developer.tomtom.com/
+    ```
+
+5.  Initialize the database:
     Run the following commands to create the database schema and apply migrations.
     ```bash
     python manage.py makemigrations core
     python manage.py migrate
     ```
 
-5.  Run the development server:
+6.  (Optional) Load real hospital data:
+    ```bash
+    python fetch_real_hospitals.py
+    ```
+
+7.  Run the development server:
     ```bash
     python manage.py runserver
     ```
     The API will be available at `http://127.0.0.1:8000/`.
+
+## Features
+
+### Urban Digital Twin with Traffic Monitoring
+The platform includes an interactive 3D urban digital twin powered by Cesium, with integrated real-time traffic congestion monitoring:
+- **3D City Visualization** - Interactive map of New Delhi with zone markers
+- **Real-time Traffic Monitoring** - Live traffic speed and congestion analysis powered by TomTom API
+- **Travel Time Calculations** - Compare current vs free-flow travel times
+- **Road Closure Detection** - Instant alerts for blocked roads
+- **Auto-Refresh Monitoring** - Automatic updates when traffic conditions change
+- **Congestion Scoring** - Visual indicators for Low, Moderate, High, and Severe congestion
+- **Historical Data Storage** - All traffic data saved for analysis
+
+Access the integrated dashboard at: `http://127.0.0.1:8000/`  
+Traffic monitoring is located in the **Urban Nexus** tab below the digital twin map.
 
 ## Mobile Application Setup (Flutter)
 

@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Congestion Monitor - Fresh Corridor Initiative</title>
+    <link rel="stylesheet" href="{% static 'core/css/traffic.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚦 Traffic Congestion Monitor</h1>
+            <p class="subtitle">Real-time traffic data powered by TomTom API | Part of Fresh Corridor Initiative</p>
+        </header>
+
+        <div class="controls">
+            <div class="input-group">
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="latitude" value="28.6139" placeholder="28.6139">
+            </div>
+            <div class="input-group">
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="longitude" value="77.2090" placeholder="77.2090">
+            </div>
+            <button id="fetchBtn" class="fetch-btn">Fetch Traffic Data</button>
+            <button id="autoRefreshBtn" class="auto-refresh-btn">🔄 Monitoring: OFF</button>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Loading traffic data...</p>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="results" class="results hidden">
+            <div class="card congestion-card">
+                <div class="card-header">
+                    <h2>Congestion Score</h2>
+                </div>
+                <div class="card-body">
+                    <div class="congestion-score" id="congestionScore">--</div>
+                    <div class="congestion-label" id="congestionLabel">Loading...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🚗</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Current Average Speed</div>
+                        <div class="stat-value" id="currentSpeed">--</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Free Flow Speed</div>
+                        <div class="stat-value" id="freeFlowSpeed">--</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Current Travel Time</div>
+                        <div class="stat-value" id="currentTime">--</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Normal Travel Time</div>
+                        <div class="stat-value" id="normalTime">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Road Information</h3>
+                    <div class="info-item">
+                        <span class="info-label">Road Class:</span>
+                        <span class="info-value" id="roadClass">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Road Closure:</span>
+                        <span class="info-value" id="roadClosure">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Data Confidence:</span>
+                        <span class="info-value" id="confidence">--</span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Location</h3>
+                    <div class="info-item">
+                        <span class="info-label">Latitude:</span>
+                        <span class="info-value" id="locLat">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Longitude:</span>
+                        <span class="info-value" id="locLon">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Coordinates:</span>
+                        <span class="info-value" id="coordCount">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="back-link">
+            <a href="/">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script src="{% static 'core/js/traffic.js' %}"></script>
+</body>
+</html>
