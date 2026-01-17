@@ -1,0 +1,405 @@
+:root {
+    --color-primary: #6366f1;
+    --color-primary-light: #818cf8;
+    --color-white: #ffffff;
+    --color-dark: #1e293b;
+    --color-background: #f8fafc;
+    --color-info-dark: #64748b;
+    --color-danger: #f43f5e;
+
+    --farmer-accent: #10b981;
+    --health-accent: #ef4444;
+    --citizen-accent: #3b82f6;
+    --planner-accent: #f59e0b;
+
+    --transition-speed: 0.6s;
+    --border-radius-lg: 2rem;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+}
+
+.dark-theme-variables {
+    --color-background: #0b0e14;
+    --color-white: #161b22;
+    --color-dark: #f0f6fc;
+    --color-info-dark: #8b949e;
+    --glass-bg: rgba(22, 27, 34, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+.ai-grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 2px 2px, rgba(99, 102, 241, 0.15) 1px, transparent 0),
+        linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+    background-size: 30px 30px, 90px 90px, 90px 90px;
+    z-index: -2;
+    pointer-events: none;
+}
+
+.ai-mesh {
+    position: fixed;
+    inset: 0;
+    background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+    opacity: 0.05;
+    z-index: -1;
+    pointer-events: none;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    padding: 2rem;
+}
+
+/* Background elements matching user files */
+.bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    background-image:
+        radial-gradient(circle at 2px 2px, rgba(99, 102, 241, 0.1) 1px, transparent 0),
+        linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px, 80px 80px, 80px 80px;
+    background-position: center center;
+}
+
+.blob {
+    position: fixed;
+    width: 60vw;
+    height: 60vw;
+    filter: blur(80px);
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0.15;
+    animation: floatingMesh 15s infinite alternate ease-in-out;
+}
+
+@keyframes floatingMesh {
+    0% {
+        transform: translate(-10%, -10%) rotate(0deg) scale(1);
+    }
+
+    50% {
+        transform: translate(10%, 5%) rotate(90deg) scale(1.1);
+    }
+
+    100% {
+        transform: translate(-5%, 15%) rotate(180deg) scale(1);
+    }
+}
+
+.ai-scanner {
+    position: fixed;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 50vh;
+    background: linear-gradient(to bottom, transparent, rgba(99, 102, 241, 0.03), transparent);
+    z-index: 5;
+    pointer-events: none;
+    animation: scanLine 8s linear infinite;
+}
+
+@keyframes scanLine {
+    0% {
+        top: -50%;
+    }
+
+    100% {
+        top: 100%;
+    }
+}
+
+.blob-1 {
+    top: -10%;
+    left: -10%;
+    background: #6C5CE7;
+}
+
+.blob-2 {
+    bottom: -10%;
+    right: -10%;
+    background: #a29bfe;
+    animation-delay: -5s;
+}
+
+@keyframes move {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(100px, 50px) scale(1.1);
+    }
+}
+
+.landing-container {
+    text-align: center;
+    max-width: 1100px;
+    width: 100%;
+    z-index: 10;
+}
+
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--color-dark);
+}
+
+.primary-text {
+    background: linear-gradient(90deg, #6366f1, #a855f7, #6366f1);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+    to {
+        background-position: 200% center;
+    }
+}
+
+.subtitle {
+    color: var(--color-info-dark);
+    margin-bottom: 3.5rem;
+    font-size: 1.1rem;
+}
+
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+}
+
+.role-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    padding: 3rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.role-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.role-card:hover::before {
+    transform: translateX(100%);
+}
+
+.role-card:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 40px 80px rgba(99, 102, 241, 0.15);
+    border-color: var(--color-primary-light);
+}
+
+.dark-theme-variables .role-card:hover {
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.ai-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--color-primary-light);
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.6;
+    transition: 0.3s;
+}
+
+.role-card:hover .ai-badge {
+    opacity: 1;
+    background: var(--color-primary);
+    color: white;
+}
+
+.ai-pulse {
+    width: 6px;
+    height: 6px;
+    background: var(--color-primary-light);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+
+.dark-theme-variables .role-card:hover {
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Theme Toggler */
+.theme-toggler {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    background: var(--color-white);
+    height: 2.8rem;
+    width: 5.5rem;
+    border-radius: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    border: 1px solid var(--glass-border);
+}
+
+.theme-toggler span {
+    font-size: 1.4rem;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border-radius: 1.2rem;
+}
+
+.theme-toggler span.active {
+    background: var(--color-primary);
+    color: white;
+}
+
+.img-container {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.role-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.4s ease;
+}
+
+.role-card:hover img {
+    transform: scale(1.15);
+}
+
+.role-card h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--color-dark);
+}
+
+.accent-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+}
+
+.role-card:hover .accent-bar {
+    transform: scaleX(1);
+}
+
+.farmer .accent-bar {
+    background: var(--farmer-accent);
+}
+
+.health .accent-bar {
+    background: var(--health-accent);
+}
+
+.resident .accent-bar {
+    background: var(--citizen-accent);
+}
+
+.planner .accent-bar {
+    background: var(--planner-accent);
+}
+
+/* Animation Overlay */
+.zoom-effect {
+    position: fixed;
+    z-index: 1000;
+    background: white;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-lg);
+    transition: all var(--transition-speed) cubic-bezier(0.7, 0, 0.3, 1);
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zoom-effect.active {
+    width: 100vw !important;
+    height: 100vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0;
+    opacity: 0;
+}
+
+.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.4s ease;
+}
