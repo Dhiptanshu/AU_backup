@@ -79,6 +79,35 @@ The dashboard is now live at: **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 ---
 
 
+---
+
+## 🚜 Agri-Logistic Validator (Blockchain Module)
+
+A standalone Django service simulating the "Mandi (Market) Gatekeeper" application. It validates incoming shipments and mints them on the Sepolia Blockchain for transparency.
+
+### Features
+*   **Gatekeeper Form**: Submit Farmer Name, Crop, Quantity, and Proof (Image).
+*   **Blockchain Verification**: Mints a transaction on the **Sepolia Testnet**.
+*   **Live Market API**: Exposes real-time price trends and stock levels to the main dashboard.
+
+### **Running the Validator**
+*The validator runs as a separate service on Port 8001.*
+
+1.  Open a **New Terminal**.
+2.  Navigate to the `agri` directory:
+    ```bash
+    cd agri
+    ```
+3.  Start the Server:
+    ```bash
+    python manage.py runserver 8001
+    ```
+4.  Access the Validator Dashboard: **[http://127.0.0.1:8001/](http://127.0.0.1:8001/)**
+
+*Once running, the Main App (Port 8000) will automatically sync and display "Verified" batches in the Agri-Logistics tab.*
+
+---
+
 ## Error Handling
 
 *   **Map Rendering**: If the map is black, ensure you have an active internet connection as CesiumJS streams global data.

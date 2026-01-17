@@ -5,6 +5,13 @@ CARBONCRED-main/
 SIH25222_114634_JavaChip$/
 fresh_corridor_backend/trash_issue_reporting.html
 
+# Agri Module
+agri/.env
+agri/db.sqlite3
+agri/venv/
+agri/node_modules/
+agri/__pycache__/
+
 # Python
 __pycache__/
 *.py[cod]

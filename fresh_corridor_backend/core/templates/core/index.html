@@ -487,6 +487,36 @@
                 </div>
             </div>
 
+            <!-- VALIDATOR LIVE SECTION -->
+            <div class="card" style="margin-bottom: 2rem; border-left: 4px solid #8b5cf6;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; color: #7c3aed;">💰 Azadpur Live Rates (Validator Feed)</h3>
+                    <span class="badge bg-warning" id="validator-status">Connecting to Port 8001...</span>
+                </div>
+                <div class="table-container" style="margin-top:1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Commodity</th>
+                                <th>Modal Price (₹/kg)</th>
+                                <th>City Stock (kg)</th>
+                                <th>Trend</th>
+                                <th>Alert</th>
+                            </tr>
+                        </thead>
+                        <tbody id="validator-table">
+                            <tr>
+                                <td colspan="5" style="text-align:center; padding: 2rem; color: #64748b;">
+                                    Waiting for Agri Validator Service...<br>
+                                    <small>Please ensure `python manage.py runserver 8001` is running in `agri/`
+                                        directory.</small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="card">
                 <h3>Incoming Supply Log</h3>
                 <div class="table-container">

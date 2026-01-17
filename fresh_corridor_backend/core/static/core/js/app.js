@@ -405,23 +405,78 @@ async function loadHealthData() {
 // 4. AGRI DATA
 async function loadAgriData() {
     try {
-        const res = await fetch(`${API_BASE}/farmer/`);
+        // Fetch LIVE Data from Validator Service (Port 8001)
+        const res = await fetch('http://127.0.0.1:8001/api/agri/batches/');
+        if (!res.ok) throw new Error("Validator Service Unreachable");
+
         const crops = await res.json();
 
+        // Update KPI Counters
         document.getElementById('agri-count').innerText = crops.length;
         const riskCount = crops.filter(c => c.spoilage_risk_score > 50).length;
         document.getElementById('spoilage-risk').innerText = riskCount;
 
+        // Populate Table with Validator Data
         document.getElementById('agri-table').innerHTML = crops.map(c => `
             <tr>
-                <td>${c.crop_type}</td>
+                <td>${c.crop_name || c.crop}</td>
                 <td>${c.farmer_name}</td>
-                <td>${c.origin_zone_name}</td>
+                <td><span style="color:#64748b">North Corridor</span></td> <!-- Static for Validator Data -->
                 <td>${c.quantity_kg}kg</td>
-                <td><span class="badge ${c.spoilage_risk_score > 50 ? 'bg-danger' : 'bg-success'}">${c.spoilage_risk_score}%</span></td>
+                <td>
+                    <span class="badge ${c.spoilage_risk_score > 50 ? 'bg-danger' : 'bg-success'}">
+                        ${c.spoilage_risk_score.toFixed(0)}%
+                    </span>
+                    ${c.status === 'VERIFIED' ? '<span class="badge bg-success">✅ Verified</span>' : ''}
+                </td>
             </tr>
         `).join('');
-    } catch (e) { console.error(e); }
+
+        // Also fetch Market Metrics (Prices)
+        fetchValidatorData();
+
+    } catch (e) {
+        console.error("Agri Load Error:", e);
+        document.getElementById('agri-table').innerHTML = `
+            <tr><td colspan="5" style="text-align:center; color:#ef4444;">
+                Could not load live shipments. Is Agri-Validator (Port 8001) running?
+            </td></tr>`;
+    }
+}
+
+async function fetchValidatorData() {
+    const statusEl = document.getElementById('validator-status');
+    const tableEl = document.getElementById('validator-table');
+
+    try {
+        const res = await fetch('http://127.0.0.1:8001/api/agri/market-metrics/');
+        if (!res.ok) throw new Error("Service unavailable");
+
+        const data = await res.json();
+        const commodities = data.commodities || [];
+
+        statusEl.className = 'badge bg-success';
+        statusEl.innerText = 'Connected • Live';
+
+        tableEl.innerHTML = commodities.map(c => `
+            <tr>
+                <td style="font-weight:600;">${c.commodity}</td>
+                <td style="font-size:1.1rem;">₹${c.modal_price}</td>
+                <td>${c.city_stock_kg.toLocaleString()} kg</td>
+                <td><span style="color:${c.trend === 'up' ? 'green' : 'gray'}">${c.trend === 'up' ? '📈 Rising' : '➡️ Stable'}</span></td>
+                <td>${c.scarcity_alert ? '<span class="badge bg-danger">Low Stock</span>' : '<span class="badge bg-success">Adequate</span>'}</td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.warn("Validator Fetch Failed:", e);
+        statusEl.className = 'badge bg-danger';
+        statusEl.innerText = 'Disconnected';
+        tableEl.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">
+            ⚠ Failed to connect to Validator Service on Port 8001. <br>
+            Is the Agri-Validator running?
+        </td></tr>`;
+    }
 }
 
 // 5. CITIZEN DATA
