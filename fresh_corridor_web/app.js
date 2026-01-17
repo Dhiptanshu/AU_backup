@@ -6,7 +6,7 @@ let viewer = null;
 const API_BASE = 'http://127.0.0.1:8000/api';
 
 function initCesium() {
-    if(viewer) return;
+    if (viewer) return;
     viewer = new Cesium.Viewer('cesiumContainer', {
         terrainProvider: Cesium.createWorldTerrain(),
         baseLayerPicker: false,
@@ -18,13 +18,13 @@ function initCesium() {
         timeline: false,
         animation: false
     });
-    
+
     // Fly to New Delhi
     viewer.camera.flyTo({
-        destination : Cesium.Cartesian3.fromDegrees(77.2090, 28.6139, 5000),
-        orientation : {
-            heading : Cesium.Math.toRadians(0.0),
-            pitch : Cesium.Math.toRadians(-45.0),
+        destination: Cesium.Cartesian3.fromDegrees(77.2090, 28.6139, 5000),
+        orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-45.0),
         }
     });
 
@@ -40,14 +40,14 @@ async function fetchZonesForMap() {
             viewer.entities.add({
                 position: Cesium.Cartesian3.fromDegrees(z.longitude, z.latitude),
                 point: { pixelSize: 10, color: Cesium.Color.fromCssColorString('#0d9488') },
-                label: { 
-                    text: z.name, 
-                    font: '14px sans-serif', 
-                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM 
+                label: {
+                    text: z.name,
+                    font: '14px sans-serif',
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM
                 }
             });
         });
-    } catch(e) { console.error("Map Data Error", e); }
+    } catch (e) { console.error("Map Data Error", e); }
 }
 
 // 2. TAB LOGIC
@@ -65,37 +65,37 @@ function switchTab(tabId) {
 async function loadHealthData() {
     try {
         const [hosp, epi, deserts] = await Promise.all([
-            fetch(`${API_BASE}/health/`).then(r=>r.json()),
-            fetch(`${API_BASE}/health/epidemiology/`).then(r=>r.json()),
-            fetch(`${API_BASE}/health/health_deserts/`).then(r=>r.json())
+            fetch(`${API_BASE}/health/`).then(r => r.json()),
+            fetch(`${API_BASE}/health/epidemiology/`).then(r => r.json()),
+            fetch(`${API_BASE}/health/health_deserts/`).then(r => r.json())
         ]);
-        
+
         // Render Hospitals
-        let icu=0, icuT=0, gen=0, genT=0, oxy=0;
+        let icu = 0, icuT = 0, gen = 0, genT = 0, oxy = 0;
         let hHtml = '';
         hosp.forEach(h => {
-            icu+=h.occupied_beds_icu; icuT+=h.total_beds_icu;
-            gen+=h.occupied_beds_general; genT+=h.total_beds_general;
-            oxy+=h.oxygen_supply_level;
+            icu += h.occupied_beds_icu; icuT += h.total_beds_icu;
+            gen += h.occupied_beds_general; genT += h.total_beds_general;
+            oxy += h.oxygen_supply_level;
             hHtml += `<tr><td>${h.name}</td><td>${h.zone_name}</td>
                 <td>${h.occupied_beds_icu}/${h.total_beds_icu}</td>
-                <td><span class="badge ${h.occupied_beds_icu/h.total_beds_icu > 0.8 ? 'bg-danger':'bg-success'}">${h.occupied_beds_icu/h.total_beds_icu > 0.8 ? 'CRITICAL':'STABLE'}</span></td></tr>`;
+                <td><span class="badge ${h.occupied_beds_icu / h.total_beds_icu > 0.8 ? 'bg-danger' : 'bg-success'}">${h.occupied_beds_icu / h.total_beds_icu > 0.8 ? 'CRITICAL' : 'STABLE'}</span></td></tr>`;
         });
         document.getElementById('hospital-table').innerHTML = hHtml;
         document.getElementById('icu-total').innerText = `${icu}/${icuT}`;
         document.getElementById('general-total').innerText = `${gen}/${genT}`;
-        document.getElementById('oxygen-avg').innerText = Math.round(oxy/hosp.length || 0) + '%';
+        document.getElementById('oxygen-avg').innerText = Math.round(oxy / hosp.length || 0) + '%';
 
         // Render Epi
         document.getElementById('epi-list').innerHTML = epi.map(e => `
             <div style="padding:0.8rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
                 <strong>${e.zone_name}</strong>
-                <span style="color:${e.resp_cases>50?'red':'orange'}">Cases: ${e.resp_cases} (AQI ${e.aqi})</span>
+                <span style="color:${e.resp_cases > 50 ? 'red' : 'orange'}">Cases: ${e.resp_cases} (AQI ${e.aqi})</span>
             </div>`).join('');
 
         // Render Deserts
         const dElem = document.getElementById('desert-alerts');
-        if(deserts.length === 0) dElem.innerHTML = '<div style="padding:1rem;color:green;">No Health Deserts</div>';
+        if (deserts.length === 0) dElem.innerHTML = '<div style="padding:1rem;color:green;">No Health Deserts</div>';
         else dElem.innerHTML = deserts.map(d => `<div style="padding:0.8rem; background:#fff1f2; margin-bottom:0.5rem; border-left:3px solid red;">
             <strong>Health Desert: ${d.name}</strong><br><small>High Vulnerability Zone</small></div>`).join('');
     } catch (e) { console.error("Health Data Error", e); }
@@ -106,7 +106,7 @@ async function loadAgriData() {
     try {
         const res = await fetch(`${API_BASE}/farmer/`);
         const crops = await res.json();
-        
+
         document.getElementById('agri-count').innerText = crops.length;
         const riskCount = crops.filter(c => c.spoilage_risk_score > 50).length;
         document.getElementById('spoilage-risk').innerText = riskCount;
@@ -120,7 +120,7 @@ async function loadAgriData() {
                 <td><span class="badge ${c.spoilage_risk_score > 50 ? 'bg-danger' : 'bg-success'}">${c.spoilage_risk_score}%</span></td>
             </tr>
         `).join('');
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 // 5. CITIZEN DATA
@@ -128,9 +128,9 @@ async function loadCitizenData() {
     try {
         const res = await fetch(`${API_BASE}/citizen/`);
         const reports = await res.json();
-        
+
         const cElem = document.getElementById('citizen-reports');
-        if(reports.length === 0) cElem.innerHTML = '<div style="padding:1rem;color:#666;">No recent reports in your area.</div>';
+        if (reports.length === 0) cElem.innerHTML = '<div style="padding:1rem;color:#666;">No recent reports in your area.</div>';
         else cElem.innerHTML = reports.map(r => `
             <div style="padding:0.8rem; border-bottom:1px solid #eee;">
                 <span class="badge bg-warning">${r.report_type}</span>
@@ -138,5 +138,89 @@ async function loadCitizenData() {
                 <div style="font-size:0.8rem; color:#888;">${new Date(r.timestamp).toLocaleDateString()} • ${r.zone_name}</div>
             </div>
         `).join('');
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
+
+    // Load AQI Hotspots
+    loadAQIHotspots();
+}
+
+// 6. AQI HOTSPOTS
+async function loadAQIHotspots() {
+    try {
+        const res = await fetch(`${API_BASE}/get_stations`);
+        const stations = await res.json();
+
+        // Filter stations that have AQI/Pollutant data
+        const withData = stations.filter(s => s.aqi || s.co2_estimated);
+
+        // Sort by AQI descending (use aqi property or fallback to estimated co2 as proxy if needed, or just 0)
+        // Note: aqi is string in some feeds, ensure parsing
+        withData.sort((a, b) => {
+            let vA = parseFloat(a.aqi) || 0;
+            let vB = parseFloat(b.aqi) || 0;
+            return vB - vA;
+        });
+
+        const top5 = withData.slice(0, 5);
+
+        const listElem = document.getElementById('aqi-hotspots-list');
+        if (top5.length === 0) {
+            listElem.innerHTML = '<div style="padding:1rem;color:#666;">No real-time AQI data available.</div>';
+            return;
+        }
+
+        listElem.innerHTML = top5.map(s => {
+            let val = parseFloat(s.aqi) || 0;
+            let cls = 'aqi-good';
+            if (val > 50) cls = 'aqi-satisfactory';
+            if (val > 100) cls = 'aqi-moderate';
+            if (val > 200) cls = 'aqi-poor';
+            if (val > 300) cls = 'aqi-very-poor';
+            if (val > 400) cls = 'aqi-severe';
+
+            return `
+            <div class="hotspot-item" onclick="openStationModal('${s.name}')">
+                <div>
+                    <div style="font-weight:600;">${s.city}</div>
+                    <div style="font-size:0.8rem; color:#666;">${s.name}</div>
+                </div>
+                <div class="badge ${cls}" style="font-size:0.9rem;">AQI ${val}</div>
+            </div>
+            `;
+        }).join('');
+
+        // Store for modal lookup
+        window.allStations = stations;
+
+    } catch (e) { console.error("AQI Load Error", e); }
+}
+
+function openStationModal(stationName) {
+    const s = (window.allStations || []).find(x => x.name === stationName);
+    if (!s) return;
+
+    document.getElementById('modal-station-name').innerText = s.name;
+    document.getElementById('modal-station-location').innerText = `${s.city}, ${s.state}`;
+    document.getElementById('modal-aqi').innerText = s.aqi || '--';
+    document.getElementById('modal-predominant').innerText = s.predominant_parameter || '--';
+    document.getElementById('modal-updated').innerText = 'Last Update: ' + (s.live_ts || 'N/A');
+
+    const pGrid = document.getElementById('modal-pollutants');
+    if (s.pollutants && s.pollutants.length > 0) {
+        pGrid.innerHTML = s.pollutants.map(p => `
+            <div class="pollutant-card">
+                <div class="p-label">${p.id}</div>
+                <div class="p-val">${p.avg || '--'}</div>
+                <div style="font-size:0.7rem; color:#666; margin-top:4px;">Min ${p.min} / Max ${p.max}</div>
+            </div>
+        `).join('');
+    } else {
+        pGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">No detailed pollutant data.</div>';
+    }
+
+    document.getElementById('station-modal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('station-modal').classList.remove('active');
 }

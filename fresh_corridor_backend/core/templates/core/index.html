@@ -82,6 +82,52 @@
                 <button class="btn-primary" onclick="loadHealthData()">Refresh Data</button>
             </div>
 
+            <!-- Health Tab Map -->
+            <div class="card" style="padding:0; border:none; height:500px; margin-bottom:1.5rem; position:relative;">
+                <div id="healthMapContainer" style="width:100%; height:100%;"></div>
+
+                <!-- NEW: Toggle Controls -->
+                <div
+                    style="position:absolute; top:10px; left:10px; background:rgba(255,255,255,0.95); padding:10px 15px; border-radius:8px; z-index:99; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <div
+                        style="font-weight:700; color:#334155; margin-bottom:8px; font-size:0.9rem; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
+                        Map Layers</div>
+                    <label
+                        style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer; font-size:0.9rem; color:#475569;">
+                        <input type="checkbox" id="toggle-hospitals" checked onchange="toggleMapLayer('hospital')"
+                            style="margin-right:8px;"> Show Hospitals
+                    </label>
+                    <label
+                        style="display:flex; align-items:center; margin-bottom:8px; cursor:pointer; font-size:0.9rem; color:#475569;">
+                        <input type="checkbox" id="toggle-aqi" checked onchange="toggleMapLayer('aqi')"
+                            style="margin-right:8px;"> Show AQI Stations
+                    </label>
+
+                    <div style="border-top:1px solid #e2e8f0; padding-top:6px; margin-top:6px;">
+                        <div style="font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:4px;">
+                            Hospital Scale (<span id="scale-val">50</span>)
+                        </div>
+                        <input type="range" id="hospital-scale" min="10" max="500" value="50"
+                            style="width:100%; cursor:pointer;"
+                            oninput="document.getElementById('scale-val').innerText = this.value; toggleMapLayer('hospital')">
+                        <div style="font-size:0.7rem; color:#64748b;">Show Top N by Beds</div>
+                    </div>
+                </div>
+
+                <div
+                    style="position:absolute; bottom:20px; right:20px; background:rgba(0,0,0,0.7); color:white; padding:10px; border-radius:8px; font-size:0.8rem;">
+                    <div><span
+                            style="display:inline-block; width:10px; height:10px; background:red; border-radius:50%;"></span>
+                        Hospital (Critical)</div>
+                    <div><span
+                            style="display:inline-block; width:10px; height:10px; background:green; border-radius:50%;"></span>
+                        Hospital (Stable)</div>
+                    <div><span
+                            style="display:inline-block; width:10px; height:10px; background:orange; border-radius:50%;"></span>
+                        AQI Station</div>
+                </div>
+            </div>
+
             <div class="dashboard-grid">
                 <div class="card">
                     <div class="stat-indicator" style="background: var(--danger-color);"></div>
@@ -89,6 +135,7 @@
                     <div class="stat-value" style="color: var(--danger-color);" id="icu-total">--</div>
                     <div class="stat-label">Critical Care Beds</div>
                 </div>
+                <!-- ... existing cards ... -->
                 <div class="card">
                     <div class="stat-indicator" style="background: var(--success-color);"></div>
                     <h3>General Ward</h3>
@@ -103,10 +150,17 @@
                 </div>
             </div>
 
+            <!-- Real-Time AQI Section -->
+            <h2 style="margin-top:2rem;">Real-Time Environmental Data</h2>
             <div class="dashboard-grid">
                 <div class="card">
-                    <h3>Epidemiological Heatmap Data</h3>
-                    <div id="epi-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
+                    <h3>AQI Hotspots (Top 5)</h3>
+                    <div
+                        style="display:flex; justify-content:space-between; padding:0.5rem; background:#f8fafc; margin-bottom:0.5rem; font-weight:600; font-size:0.85rem;">
+                        <span>Station / Zone</span>
+                        <span>AQI</span>
+                    </div>
+                    <div id="epi-list" style="max-height: 400px; overflow-y: auto;">Loading Real-Time Data...</div>
                 </div>
                 <div class="card">
                     <h3>Health Desert Alerts</h3>
@@ -187,9 +241,42 @@
                     </div>
                 </div>
                 <div class="card">
+                    <h3>Top AQI Hotspots</h3>
+                    <div id="aqi-hotspots-list" style="min-height: 100px;">Loading hotspots...</div>
+                </div>
+                <div class="card">
                     <h3>Recent Community Reports</h3>
                     <div id="citizen-reports">Loading...</div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Detail Modal -->
+    <div id="station-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modal-station-name" style="margin-top:0;">Station Details</h2>
+            <div id="modal-station-location" style="color:var(--text-muted); margin-bottom:1rem;">Location</div>
+
+            <div
+                style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; background:#f8fafc; padding:1.5rem; border-radius:12px;">
+                <div>
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">AQI INDEX</div>
+                    <div id="modal-aqi" style="font-size:2.5rem; font-weight:800;">--</div>
+                </div>
+                <div style="flex:1; border-left:2px solid #e2e8f0; padding-left:1.5rem;">
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">PREDOMINANT</div>
+                    <div id="modal-predominant" style="font-size:1.5rem; font-weight:700; color:var(--primary-color);">
+                        --</div>
+                </div>
+            </div>
+
+            <h3 style="font-size:1rem;">Pollutant Breakdown</h3>
+            <div id="modal-pollutants" class="pollutant-grid">
+                <!-- details injected here -->
+            </div>
+            <div style="margin-top: 1.5rem; font-size: 0.8rem; color: #ccc; text-align: right;" id="modal-updated">
             </div>
         </div>
     </div>

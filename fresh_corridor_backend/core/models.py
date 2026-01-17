@@ -8,6 +8,7 @@ class CityZone(models.Model):
     longitude = models.FloatField()
     risk_level = models.CharField(max_length=20, default='Low') # Low, Medium, High
     average_income_tier = models.CharField(max_length=20, default='Medium') # Low, Medium, High
+    area_type = models.CharField(max_length=50, default='Mixed') # Residential, Industrial, Commercial
 
     def __str__(self):
         return self.name
@@ -20,6 +21,7 @@ class WeatherLog(models.Model):
     wind_speed_kmh = models.FloatField()
     visibility_km = models.FloatField()
     air_quality_index = models.IntegerField(default=50) # lower is better
+    pollutant_details = models.TextField(default="{}") # JSON string of detailed pollutants (PM2.5, SO2, etc.)
 
     def __str__(self):
         return f"{self.zone.name} - {self.timestamp}"
@@ -36,6 +38,7 @@ class Hospital(models.Model):
     occupied_beds_general = models.IntegerField(default=0)
     
     oxygen_supply_level = models.IntegerField(default=100) # Percentage
+    is_live_data = models.BooleanField(default=False) # Helper for simulation vs real
 
     def __str__(self):
         return self.name

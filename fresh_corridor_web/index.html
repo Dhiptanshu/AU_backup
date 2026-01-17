@@ -186,9 +186,42 @@
                     </div>
                 </div>
                 <div class="card">
+                    <h3>Top AQI Hotspots</h3>
+                    <div id="aqi-hotspots-list" style="min-height: 100px;">Loading hotspots...</div>
+                </div>
+                <div class="card">
                     <h3>Recent Community Reports</h3>
                     <div id="citizen-reports">Loading...</div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Detail Modal -->
+    <div id="station-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modal-station-name" style="margin-top:0;">Station Details</h2>
+            <div id="modal-station-location" style="color:var(--text-muted); margin-bottom:1rem;">Location</div>
+
+            <div
+                style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; background:#f8fafc; padding:1.5rem; border-radius:12px;">
+                <div>
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">AQI INDEX</div>
+                    <div id="modal-aqi" style="font-size:2.5rem; font-weight:800;">--</div>
+                </div>
+                <div style="flex:1; border-left:2px solid #e2e8f0; padding-left:1.5rem;">
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">PREDOMINANT</div>
+                    <div id="modal-predominant" style="font-size:1.5rem; font-weight:700; color:var(--primary-color);">
+                        --</div>
+                </div>
+            </div>
+
+            <h3 style="font-size:1rem;">Pollutant Breakdown</h3>
+            <div id="modal-pollutants" class="pollutant-grid">
+                <!-- details injected here -->
+            </div>
+            <div style="margin-top: 1.5rem; font-size: 0.8rem; color: #ccc; text-align: right;" id="modal-updated">
             </div>
         </div>
     </div>

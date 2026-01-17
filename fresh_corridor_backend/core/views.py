@@ -90,6 +90,7 @@ class HealthViewSet(viewsets.ModelViewSet):
                     'longitude': zone.longitude,
                     'resp_cases': health_stats.respiratory_cases_active,
                     'aqi': weather.air_quality_index,
+                    'pollutant_details': weather.pollutant_details,
                     'temperature': weather.temperature_c,
                     'distance_km': round(dist, 2)
                 })
@@ -130,3 +131,17 @@ class FarmerViewSet(viewsets.ModelViewSet):
 class CitizenViewSet(viewsets.ModelViewSet):
     queryset = CitizenReport.objects.all()
     serializer_class = CitizenReportSerializer
+
+# --- Shared: AQI Stations ---
+from rest_framework.decorators import api_view
+from .services.aqi_service import AQIService
+
+@api_view(['GET'])
+def get_stations_api(request):
+    """Proxy CPCB data from AQIService"""
+    # Optional: trigger refresh
+    if 'refresh' in request.query_params:
+        AQIService.fetch_live_data()
+    
+    stations = AQIService.get_stations()
+    return Response(stations)
