@@ -11,10 +11,6 @@ agri/db.sqlite3
 agri/venv/
 agri/node_modules/
 agri/__pycache__/
-*.jpg
-*.jpeg
-*.webp
-*.png
 
 # Python
 __pycache__/

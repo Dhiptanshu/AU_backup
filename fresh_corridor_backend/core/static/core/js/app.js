@@ -64,14 +64,35 @@ async function fetchZonesForMap() {
         viewer.selectedEntityChanged.addEventListener(function (entity) {
             if (entity && entity.id.startsWith('zone_')) {
                 selectedZoneId = entity.properties.zone_id.getValue();
-                document.getElementById('sim-panel').style.display = 'block';
-                document.getElementById('resilience-panel').style.display = 'flex';
+
+                // Show Urban Control Center
+                const uccParams = document.getElementById('urban-control-center');
+                const zoneNameEl = document.getElementById('ucc-zone-name');
+                const hintEl = document.getElementById('urban-hint');
+                const resiliencePanel = document.getElementById('resilience-panel');
+
+                if (uccParams) {
+                    uccParams.style.display = 'flex'; // Use flex as per CSS
+                    if (zoneNameEl) zoneNameEl.innerText = entity.name;
+                }
+                if (hintEl) hintEl.style.display = 'none';
+                if (resiliencePanel) resiliencePanel.style.display = 'flex';
+
                 // Fetch standard metrics
                 fetchResilienceMetrics(selectedZoneId);
+
+                // Feedback
+                if (window.showToast) window.showToast(`Selected Zone: ${entity.name}`, 'info');
+
             } else {
                 selectedZoneId = null;
-                document.getElementById('sim-panel').style.display = 'none';
+                // Don't auto-hide immediately on deselect as it might be a route click
+                // But generally, deselecting zone should hide the panel? 
+                // Let's keep existing logic but map to new IDs
+                const uccParams = document.getElementById('urban-control-center');
+                if (uccParams) uccParams.style.display = 'none';
                 document.getElementById('resilience-panel').style.display = 'none';
+                document.getElementById('urban-hint').style.display = 'block';
             }
         });
 
@@ -149,36 +170,68 @@ function getCookie(name) {
 // 2. TAB LOGIC
 let healthInterval = null;
 
-function switchTab(tabId, el) { // Update signature to match index.html call
+function switchTab(tabId, el) {
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
 
-    // Handle specific active class for nav-tab
-    // (Assuming this function is called with 'this' from onclick)
     if (el) el.classList.add('active');
     else {
-        // Fallback if 'el' not passed, try to find by text or index (simplified: just select based on ID mapping)
         const map = { 'urban': 0, 'health': 1, 'agri': 2, 'citizen': 3 };
-        document.querySelectorAll('.nav-tab')[map[tabId]].classList.add('active');
+        const btn = document.querySelectorAll('.nav-tab')[map[tabId]];
+        if (btn) btn.classList.add('active');
     }
 
-    // Stop polling if leaving health tab
+    // Toggle Cyber Theme
+    if (tabId === 'urban' || tabId === 'health' || tabId === 'agri') {
+        document.body.classList.add('cyber-theme');
+    } else {
+        document.body.classList.remove('cyber-theme');
+    }
+
     if (healthInterval) {
         clearInterval(healthInterval);
         healthInterval = null;
     }
 
-    if (tabId === 'urban') setTimeout(initCesium, 100);
+    if (tabId === 'urban') {
+        setTimeout(initCesium, 100);
+        loadUrbanData();
+
+        if (!window.urbanRouteInitialized) {
+            initRouteTrafficAnalysis();
+            window.urbanRouteInitialized = true;
+        }
+
+        if (!window.urbanTrafficInitialized) {
+            initTrafficMonitoring();
+            window.urbanTrafficInitialized = true;
+        }
+    }
 
     if (tabId === 'health') {
         loadHealthData();
-        // Poll every 3 seconds for live updates
         healthInterval = setInterval(loadHealthData, 3000);
     }
 
     if (tabId === 'agri') loadAgriData();
-    if (tabId === 'citizen') loadCitizenData();
+
+    if (tabId === 'citizen') {
+        setTimeout(initCitizenMap, 100);
+        loadCitizenData();
+
+        fetchCitizenWeather();
+        if (window.weatherInterval) clearInterval(window.weatherInterval);
+        window.weatherInterval = setInterval(fetchCitizenWeather, 5000);
+
+        if (!window.citizenToolsInitialized) {
+            setTimeout(() => {
+                initCitizenTrafficMonitoring();
+                initCitizenRouteAnalysis();
+                window.citizenToolsInitialized = true;
+            }, 500);
+        }
+    }
 }
 
 // 3. HEALTH DATA & MAP
@@ -510,7 +563,7 @@ function getColorForAQI(aqi) {
 }
 
 // 6. AQI HOTSPOTS
-async function loadAQIHotspots() {
+async function loadAQIHotspots(containerId = 'aqi-hotspots-list') {
     try {
         const res = await fetch(`${API_BASE}/get_stations`);
         const stations = await res.json();
@@ -527,7 +580,9 @@ async function loadAQIHotspots() {
 
         const top5 = withData.slice(0, 5);
 
-        const listElem = document.getElementById('aqi-hotspots-list');
+        const listElem = document.getElementById(containerId);
+        if (!listElem) return;
+
         if (top5.length === 0) {
             listElem.innerHTML = '<div style="padding:1rem;color:#666;">No real-time AQI data available.</div>';
             return;
@@ -600,18 +655,26 @@ let previousTrafficData = null;
 const TRAFFIC_POLL_INTERVAL = 10000; // 10 seconds
 
 // Initialize traffic monitoring event listeners
+// Initialize traffic monitoring event listeners
 function initTrafficMonitoring() {
+    // Prevent double binding
+    if (window.isTrafficMonitoringInitialized) return;
+    window.isTrafficMonitoringInitialized = true;
+
     const fetchBtn = document.getElementById('fetchTrafficBtn');
     const autoRefreshBtn = document.getElementById('autoRefreshTrafficBtn');
     const latInput = document.getElementById('traffic-latitude');
     const lonInput = document.getElementById('traffic-longitude');
 
     if (fetchBtn) {
-        fetchBtn.addEventListener('click', () => fetchTrafficData(true));
+        // Use onclick to ensure single handler and overwrite any potential conflicts
+        fetchBtn.onclick = function () {
+            fetchTrafficData(true);
+        };
     }
 
     if (autoRefreshBtn) {
-        autoRefreshBtn.addEventListener('click', toggleTrafficAutoRefresh);
+        autoRefreshBtn.onclick = toggleTrafficAutoRefresh;
     }
 
     if (latInput) {
@@ -627,9 +690,37 @@ function initTrafficMonitoring() {
     }
 }
 
+// Helper: Show Error
+function showTrafficError(msg) {
+    const errEl = document.getElementById('traffic-error');
+    const loadingEl = document.getElementById('traffic-loading');
+    const resultsEl = document.getElementById('traffic-results');
+
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (resultsEl) resultsEl.style.display = 'none';
+
+    if (errEl) {
+        errEl.innerText = msg;
+        errEl.style.display = 'block';
+    } else {
+        console.error("Traffic Error:", msg);
+        alert("Traffic Error: " + msg);
+    }
+}
+
+// Helper: Format Time
+function formatTrafficTime(seconds) {
+    if (!seconds) return '--';
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}m ${sec}s`;
+}
+
 async function fetchTrafficData(showLoading = false) {
     const lat = document.getElementById('traffic-latitude').value.trim();
     const lon = document.getElementById('traffic-longitude').value.trim();
+
+    console.log(`Fetching Traffic Data for ${lat}, ${lon}`);
 
     if (!lat || !lon) {
         showTrafficError('Please enter both latitude and longitude');
@@ -874,8 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
         switchTab('citizen');
     }
 
-    initMap();
-    initThreeJS();
+    initCesium();
 
     // Default load actions...
     initTrafficMonitoring();
@@ -890,7 +980,13 @@ let routePoints = []; // Array to store 2 selected points
 let routeMarkers = []; // Array to store marker entities
 let routeLine = null; // Line entity connecting points
 
+let routeClickHandler = null;
+
 function initRouteTrafficAnalysis() {
+    // Prevent double binding of button listeners
+    if (window.isRouteTrafficAnalysisInitialized) return;
+    window.isRouteTrafficAnalysisInitialized = true;
+
     const analyzeBtn = document.getElementById('analyze-route-btn');
     const clearBtn = document.getElementById('clear-route-btn');
 
@@ -912,19 +1008,49 @@ function initRouteTrafficAnalysis() {
 }
 
 function setupMapClickHandler() {
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    console.log("Setting up Map Click Handler");
+    if (window.showToast) window.showToast("Route Analysis Ready (Click Map)", "info");
+
+    // Cleanup existing handler if any
+    if (routeClickHandler && !routeClickHandler.isDestroyed()) {
+        routeClickHandler.destroy();
+    }
+
+    routeClickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    const handler = routeClickHandler;
 
     handler.setInputAction((click) => {
-        // Convert click position to cartesian
-        const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+        // 1. Check if we clicked an existing Route Marker to avoid duplicate/stacked points
+        const pickedObject = viewer.scene.pick(click.position);
 
+        if (Cesium.defined(pickedObject) && pickedObject.id && typeof pickedObject.id === 'string' && pickedObject.id.startsWith('route_marker')) {
+            console.log("Clicked existing route marker. Ignoring.");
+            return;
+        }
+
+        // 2. Allow adding points even if we clicked a Zone (pickedObject is defined)
+        // Convert to cartesian
+        const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
         if (cartesian) {
-            // Convert to lat/lon
+            console.log("Adding route point (Zone or Empty Space)");
             const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
             const lat = Cesium.Math.toDegrees(cartographic.latitude);
             const lon = Cesium.Math.toDegrees(cartographic.longitude);
-
             addRoutePoint(lat, lon);
+
+            // Populate Traffic Monitor Inputs
+            const tLat = document.getElementById('traffic-latitude');
+            const tLon = document.getElementById('traffic-longitude');
+            if (tLat && tLon) {
+                tLat.value = lat.toFixed(4);
+                tLon.value = lon.toFixed(4);
+            }
+
+            // Close Urban Control only if we clicked EMPTY space (no zone picked)
+            // If user clicked a Zone, let the default handler open the panel (user gets both feedback)
+            if (!Cesium.defined(pickedObject)) {
+                if (typeof closeUrbanControl === 'function') closeUrbanControl();
+            }
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
@@ -944,6 +1070,7 @@ function addRoutePoint(lat, lon) {
         : Cesium.Color.fromCssColorString('#ef4444'); // Red for end
 
     const marker = viewer.entities.add({
+        id: `route_marker_${pointLabel}`, // Explicit ID for filtering
         position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
             image: createMarkerCanvas(pointLabel, routePoints.length === 1 ? '#10b981' : '#ef4444'),
@@ -1327,3 +1454,424 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Failed to load profile", e);
     }
 });
+
+// ======================================
+// 6. CITIZEN MAP & WEATHER
+// ======================================
+let citizenViewer = null;
+
+function initCitizenMap() {
+    if (citizenViewer) return;
+    citizenViewer = new Cesium.Viewer('citizenMapContainer', {
+        baseLayerPicker: false,
+        geocoder: false,
+        timeline: false,
+        animation: false,
+        homeButton: false,
+        navigationHelpButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        sceneMode: Cesium.SceneMode.SCENE3D
+    });
+
+    citizenViewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(77.2090, 28.6139, 25000),
+        orientation: {
+            heading: 0.0,
+            pitch: Cesium.Math.toRadians(-90.0),
+            roll: 0.0
+        }
+    });
+
+    citizenViewer.scene.skyAtmosphere.hueShift = -0.1;
+    citizenViewer.scene.skyAtmosphere.saturationShift = -0.1;
+    citizenViewer.scene.fog.enabled = true;
+    citizenViewer.scene.fog.density = 0.0005;
+
+    console.log("Citizen Map Initialized (Traffic Mode)");
+
+    // Setup Click Handler
+    setupCitizenMapClickHandler();
+}
+
+function setupCitizenMapClickHandler() {
+    if (!citizenViewer) return;
+    const handler = new Cesium.ScreenSpaceEventHandler(citizenViewer.scene.canvas);
+
+    handler.setInputAction((click) => {
+        const cartesian = citizenViewer.camera.pickEllipsoid(click.position, citizenViewer.scene.globe.ellipsoid);
+        if (cartesian) {
+            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            const lat = Cesium.Math.toDegrees(cartographic.latitude);
+            const lon = Cesium.Math.toDegrees(cartographic.longitude);
+
+            console.log(`Citizen Map Click: ${lat}, ${lon}`);
+
+            // 1. Add Route Point
+            addCitizenRoutePoint(lat, lon);
+
+            // 2. Populate Traffic Monitor Inputs
+            const latInput = document.getElementById('cit-traffic-latitude');
+            const lonInput = document.getElementById('cit-traffic-longitude');
+            if (latInput && lonInput) {
+                latInput.value = lat.toFixed(6);
+                lonInput.value = lon.toFixed(6);
+
+                // Optional: Flash highlights or small feedback?
+                // For now, just value update is sufficient
+            }
+        }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}
+
+async function fetchCitizenWeather() {
+    try {
+        const res = await fetch(`${API_BASE}/weather/`);
+        const data = await res.json();
+
+        // DOM Updates (Citizen Tab)
+        if (document.getElementById('w-temp')) document.getElementById('w-temp').innerText = data.temp + "°C";
+        if (document.getElementById('w-humidity')) document.getElementById('w-humidity').innerText = data.humidity + "%";
+        if (document.getElementById('w-pressure')) document.getElementById('w-pressure').innerText = data.pressure + " hPa";
+        if (document.getElementById('w-wind')) document.getElementById('w-wind').innerText = data.windSpeed + " km/h";
+        if (document.getElementById('w-dir')) document.getElementById('w-dir').innerText = "Direction: " + data.windDir;
+        if (document.getElementById('w-vis')) document.getElementById('w-vis').innerText = data.vis + " km";
+        if (document.getElementById('w-precip')) document.getElementById('w-precip').innerText = data.precipitation;
+
+        return data; // Return for reuse
+    } catch (e) {
+        console.error("Weather Fetch Error", e);
+        return null;
+    }
+}
+
+function getAQIClass(aqi) {
+    if (!aqi) return 'bg-secondary';
+    if (aqi < 50) return 'bg-success';
+    if (aqi < 100) return 'bg-success';
+    if (aqi < 200) return 'bg-warning';
+    if (aqi < 300) return 'bg-warning';
+    if (aqi < 400) return 'bg-danger';
+    return 'bg-danger';
+}
+
+// ======================================
+
+async function loadUrbanData() {
+    console.log("Loading Urban Data Phase 1...");
+
+    // 1. AQI (Reuse shared function for consistency)
+    // This ensures sorting, coloring, and data source is identical to Health/Citizen tabs
+    loadAQIHotspots('dash-aqi-list');
+
+    // 2. Market (Fetch from Agri-Validator Service Port 8001)
+    // Matches 'Agri-Logistics' tab logic
+    const ucMarketList = document.getElementById('dash-market-table');
+    if (ucMarketList) {
+        try {
+            const res = await fetch('http://127.0.0.1:8001/api/agri/market-metrics/');
+            if (res.ok) {
+                const data = await res.json();
+                const commodities = data.commodities || [];
+
+                // Display top 5 crops
+                ucMarketList.innerHTML = commodities.slice(0, 5).map(c => `
+                     <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:8px;">${c.commodity}</td>
+                        <td style="text-align:right; padding:8px; font-weight:600;">₹${c.modal_price}</td>
+                        <td style="padding:8px; text-align:center;">
+                             <span style="color:${c.trend === 'up' ? 'green' : 'gray'}">${c.trend === 'up' ? '📈' : '➡️'}</span>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                throw new Error("Agri API Error");
+            }
+        } catch (e) {
+            console.error("Market Load Failed", e);
+            // Fallback to internal API if 8001 fails (optional, or just show error)
+            ucMarketList.innerHTML = '<tr><td colspan="3" style="padding:10px; text-align:center; color:red;">Agri Service Unavailable</td></tr>';
+        }
+    }
+
+    // 3. Health (Use dash-beds-icu / dash-beds-gen)
+    // Matches Health Tab aggregation logic
+    try {
+        const hosp = await fetch(`${API_BASE}/health/`).then(r => r.json());
+
+        // Aggregate Data
+        let freeICU = 0;
+        let freeGen = 0;
+
+        if (Array.isArray(hosp)) {
+            hosp.forEach(h => {
+                freeICU += (h.total_beds_icu - h.occupied_beds_icu);
+                freeGen += (h.total_beds_general - h.occupied_beds_general);
+            });
+
+            const icuEl = document.getElementById('dash-beds-icu');
+            const genEl = document.getElementById('dash-beds-gen');
+
+            if (icuEl) icuEl.innerText = freeICU;
+            if (genEl) genEl.innerText = freeGen;
+        }
+    } catch (e) { console.error("Health Load Failed", e); }
+
+    // 4. Weather (Update Dashboard Widget from Citizen API)
+    fetchCitizenWeather().then(data => {
+        if (data) {
+            if (document.getElementById('dash-weather-hum')) document.getElementById('dash-weather-hum').innerText = data.humidity + "%";
+            if (document.getElementById('dash-weather-wind')) document.getElementById('dash-weather-wind').innerText = data.windSpeed + " km/h";
+        }
+    });
+}
+
+function closeUrbanControl() {
+    if (viewer) viewer.selectedEntity = undefined;
+    document.getElementById('urban-control-center').style.display = 'none';
+    document.getElementById('urban-hint').style.display = 'block';
+    document.getElementById('resilience-panel').style.display = 'none';
+}
+
+function runUrbanSimulation(type) {
+    const resEl = document.getElementById(`res-${type}`);
+    if (!resEl) return;
+
+    resEl.style.display = 'block';
+    resEl.innerHTML = '<span style="color:#666;">Calculating impact...</span>';
+
+    setTimeout(() => {
+        let html = '';
+        if (type === 'weather') {
+            const val = document.getElementById('sim-weather-type').value;
+            if (val === 'clear') {
+                html = '<strong style="color:green">No Adverse Impact.</strong><br>Traffic Flow: Optimal<br>Logistics Delay: 0 min';
+            } else if (val === 'rain') {
+                html = '<strong>⚠️ Heavy Rain Impact:</strong><br>• Traffic Congestion: High (+45%)<br>• Logistics Delay: +25 mins<br>• Spoilage Risk: Moderate';
+            } else if (val === 'heat') {
+                html = '<strong>🔥 Heatwave Warning:</strong><br>• Power Grid Load: +15%<br>• Health Emergencies: +12%<br>• Crop Stress: High';
+            } else {
+                html = '<strong>🌪️ Storm Alert:</strong><br>• Visibility: <50m<br>• Transport Halted<br>• AQI Spike Expected';
+            }
+        } else if (type === 'aqi') {
+            const val = parseInt(document.getElementById('sim-aqi-slider').value);
+            if (val < 100) html = '<strong style="color:green">Air Quality Acceptable.</strong><br>No major health advisories.';
+            else if (val < 300) html = '<strong style="color:orange">Poor Air Quality:</strong><br>• Respiratory Cases: +5%<br>• Outdoor Activity: Limited';
+            else html = '<strong style="color:red">SEVERE HAZARD:</strong><br>• Asthma Attacks: +25%<br>• Emergency Ward Load: Critical<br>• School Closure Recommended';
+        } else if (type === 'market') {
+            const val = document.getElementById('sim-market-event').value;
+            if (val === 'normal') html = '<strong style="color:green">Market Stable.</strong><br>Prices: Normal<br>Supply: Adequate';
+            else if (val === 'blockade') html = '<strong style="color:red">CRITICAL SHORTAGE:</strong><br>• Tomato Price: +200%<br>• Milk Supply: -60%<br>• Panic Buying Likely';
+            else html = '<strong>⚠️ Spoilage Event:</strong><br>• Economic Loss: ₹50 Lakhs<br>• Waste Management Load: High';
+        } else if (type === 'health') {
+            const val = document.getElementById('sim-health-event').value;
+            if (val === 'normal') html = '<strong style="color:green">Systems Normal.</strong><br>Bed Availability: >20%';
+            else if (val === 'surge') html = '<strong>⚠️ Epidemic Surge:</strong><br>• ICU Occupancy: 95%<br>• Oxygen Demand: +40%<br>• Staff Fatigue: High';
+            else html = '<strong>🚑 Mass Casualty:</strong><br>• Trauma Center: Full<br>• Ambulance Delay: +15 mins<br>• Mutual Aid Required';
+        }
+
+        resEl.innerHTML = html;
+    }, 1500);
+}
+
+// ======================================
+// CITIZEN TRAFFIC MONITORING
+// ======================================
+function initCitizenTrafficMonitoring() {
+    console.log("Initializing Citizen Traffic Monitoring...");
+    const fetchBtn = document.getElementById('cit-fetchTrafficBtn');
+    if (fetchBtn) {
+        console.log("Fetch Traffic Button found, attaching listener.");
+        fetchBtn.addEventListener('click', fetchCitizenTrafficData);
+    } else {
+        console.error("Fetch Traffic Button NOT found!");
+    }
+}
+
+async function fetchCitizenTrafficData() {
+    console.log("Fetching Citizen Traffic Data...");
+    const lat = document.getElementById('cit-traffic-latitude').value.trim();
+    const lon = document.getElementById('cit-traffic-longitude').value.trim();
+    const resDiv = document.getElementById('cit-traffic-results');
+    const statusDiv = document.getElementById('cit-traffic-status');
+    const detailsDiv = document.getElementById('cit-traffic-details');
+
+    if (!lat || !lon) { alert("Please enter coordinates."); return; }
+
+    statusDiv.innerText = "Loading...";
+    resDiv.style.display = 'block';
+
+    try {
+        const response = await fetch(`/api/traffic/?lat=${lat}&lon=${lon}`);
+        const data = await response.json();
+        console.log("Traffic Data Response:", data);
+
+        if (data.status === 'success') {
+            const cong = data.traffic.congestionScore;
+            statusDiv.innerText = cong + "% Congestion";
+            if (typeof getCongestionColor === 'function') {
+                statusDiv.style.color = getCongestionColor(cong);
+            }
+
+            detailsDiv.innerHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.5rem; font-size:0.9rem; text-align:left;">
+                    <div>Speed: <b>${data.traffic.currentSpeed} km/h</b></div>
+                    <div>Travel Time: <b>${Math.round(data.traffic.currentTravelTime / 60)} min</b></div>
+                </div>
+            `;
+        } else {
+            statusDiv.innerText = "Error: " + (data.message || "Unknown");
+            statusDiv.style.color = 'red';
+        }
+    } catch (e) {
+        console.error("Fetch Traffic Error:", e);
+        statusDiv.innerText = "System Error";
+    }
+}
+
+// ======================================
+// CITIZEN ROUTE ANALYSIS
+// ======================================
+let citRoutePoints = [];
+let citRouteMarkers = [];
+let citRouteLine = null;
+
+function initCitizenRouteAnalysis() {
+    console.log("Initializing Citizen Route Analysis...");
+    const analyzeBtn = document.getElementById('cit-analyze-route-btn');
+    const clearBtn = document.getElementById('cit-clear-route-btn');
+
+    if (analyzeBtn) analyzeBtn.addEventListener('click', analyzeCitizenRouteTraffic);
+    if (clearBtn) clearBtn.addEventListener('click', clearCitizenRoutePoints);
+
+    // Note: Click handler is now managed centrally by setupCitizenMapClickHandler()
+}
+
+function addCitizenRoutePoint(lat, lon) {
+    if (citRoutePoints.length >= 2) clearCitizenRoutePoints();
+
+    citRoutePoints.push({ lat, lon });
+
+    const label = citRoutePoints.length === 1 ? 'A' : 'B';
+    const color = citRoutePoints.length === 1 ? '#10b981' : '#ef4444';
+
+    const marker = citizenViewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+        billboard: {
+            image: createMarkerCanvas(label, color),
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+    });
+    citRouteMarkers.push(marker);
+
+    // Update UI
+    if (citRoutePoints.length >= 1) document.getElementById('cit-point-a-coords').innerText = `${citRoutePoints[0].lat.toFixed(4)}, ${citRoutePoints[0].lon.toFixed(4)}`;
+    if (citRoutePoints.length >= 2) document.getElementById('cit-point-b-coords').innerText = `${citRoutePoints[1].lat.toFixed(4)}, ${citRoutePoints[1].lon.toFixed(4)}`;
+
+    if (citRoutePoints.length === 2) {
+        // Draw Line
+        citRouteLine = citizenViewer.entities.add({
+            polyline: {
+                positions: [
+                    Cesium.Cartesian3.fromDegrees(citRoutePoints[0].lon, citRoutePoints[0].lat),
+                    Cesium.Cartesian3.fromDegrees(citRoutePoints[1].lon, citRoutePoints[1].lat)
+                ],
+                width: 4,
+                material: new Cesium.PolylineDashMaterialProperty({
+                    color: Cesium.Color.fromCssColorString('#3b82f6'),
+                    dashLength: 16
+                }),
+                clampToGround: true
+            }
+        });
+        document.getElementById('cit-analyze-route-btn').disabled = false;
+        document.getElementById('cit-route-instructions').innerHTML = '<strong>✅ Ready</strong><br>Click analyze.';
+    }
+}
+
+function clearCitizenRoutePoints() {
+    citRoutePoints = [];
+    citRouteMarkers.forEach(m => citizenViewer.entities.remove(m));
+    citRouteMarkers = [];
+    if (citRouteLine) {
+        citizenViewer.entities.remove(citRouteLine);
+        citRouteLine = null;
+    }
+    document.getElementById('cit-point-a-coords').innerText = '--';
+    document.getElementById('cit-point-b-coords').innerText = '--';
+    document.getElementById('cit-route-instructions').innerHTML = 'Select points on map';
+    document.getElementById('cit-analyze-route-btn').disabled = true;
+    document.getElementById('cit-route-results').style.display = 'none';
+}
+
+async function analyzeCitizenRouteTraffic() {
+    if (citRoutePoints.length !== 2) return;
+
+    // Reuse the existing analyze logic but update Citizen UI
+    const loadingEl = document.getElementById('cit-route-loading');
+    const resultsEl = document.getElementById('cit-route-results');
+
+    loadingEl.style.display = 'block';
+    resultsEl.style.display = 'none';
+
+    try {
+        const checkpoints = generateRouteCheckpoints(citRoutePoints[0], citRoutePoints[1], 5);
+        const trafficPromises = checkpoints.map(point =>
+            fetch(`${API_BASE}/traffic/?lat=${point.lat}&lon=${point.lon}`)
+                .then(res => res.json())
+                .catch(err => ({ error: true }))
+        );
+        const trafficDataArray = await Promise.all(trafficPromises);
+        const validData = trafficDataArray.filter(data =>
+            data.status === 'success' && data.traffic && data.traffic.currentSpeed
+        );
+
+        if (validData.length === 0) throw new Error('No traffic data');
+
+        const totalCongestion = validData.reduce((sum, data) => sum + data.traffic.congestionScore, 0);
+        const avgCongestion = totalCongestion / validData.length;
+        const totalSpeed = validData.reduce((sum, data) => sum + data.traffic.currentSpeed, 0);
+        const avgSpeed = totalSpeed / validData.length;
+        const distance = calculateDistance(citRoutePoints[0], citRoutePoints[1]);
+        const estimatedTime = (distance / avgSpeed) * 60;
+
+        // Display results
+        document.getElementById('cit-route-avg-congestion').innerText = Math.round(avgCongestion) + '%';
+        document.getElementById('cit-route-distance').innerText = distance.toFixed(2) + ' km';
+        document.getElementById('cit-route-time').innerText = formatRouteTime(estimatedTime);
+
+        resultsEl.style.display = 'block';
+
+    } catch (e) {
+        alert("Route analysis failed.");
+    } finally {
+        loadingEl.style.display = 'none';
+    }
+}
+
+f u n c t i o n   s w i t c h U r b a n T a b ( t a b I d ,   b t n )   {  
+         / /   H i d e   a l l   t a b   c o n t e n t  
+         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' . u c - c o n t e n t ' ) . f o r E a c h ( c o n t e n t   = >   {  
+                 c o n t e n t . c l a s s L i s t . r e m o v e ( ' a c t i v e ' ) ;  
+                 c o n t e n t . s t y l e . d i s p l a y   =   ' n o n e ' ;   / /   E n s u r e   d i s p l a y   n o n e   i s   a p p l i e d  
+         } ) ;  
+  
+         / /   R e m o v e   a c t i v e   c l a s s   f r o m   a l l   b u t t o n s  
+         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' . u c - t a b ' ) . f o r E a c h ( t a b   = >   {  
+                 t a b . c l a s s L i s t . r e m o v e ( ' a c t i v e ' ) ;  
+         } ) ;  
+  
+         / /   S h o w   s e l e c t e d   t a b  
+         c o n s t   s e l e c t e d C o n t e n t   =   d o c u m e n t . g e t E l e m e n t B y I d ( t a b I d ) ;  
+         i f   ( s e l e c t e d C o n t e n t )   {  
+                 s e l e c t e d C o n t e n t . c l a s s L i s t . a d d ( ' a c t i v e ' ) ;  
+                 s e l e c t e d C o n t e n t . s t y l e . d i s p l a y   =   ' b l o c k ' ;  
+         }  
+  
+         / /   S e t   a c t i v e   b u t t o n  
+         i f   ( b t n )   {  
+                 b t n . c l a s s L i s t . a d d ( ' a c t i v e ' ) ;  
+         }  
+ }  
+ 

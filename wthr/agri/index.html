@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delhi UrbanGrid | Azadpur Command</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <nav class="sidebar">
+            <div class="logo">DELHI<span class="highlight">GRID</span></div>
+            <ul class="nav-links">
+                <li>🚦 NCR Monitor</li>
+                <li class="active">🚜 Agri-Nexus</li>
+                <li>☁️ Smog Twin</li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>National Capital Agri-Nexus</h1>
+                <div class="status-indicator">
+                    <span class="dot live"></span> System Live | Sepolia Network
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+
+                <div class="left-col">
+                    <div class="gatekeeper-card">
+                        <div class="card-title">🛂 Mandi Gatekeeper Entry</div>
+                        <form id="entry-form" onsubmit="handleVerification(event)">
+                            <div class="form-group">
+                                <label>Farmer Name</label>
+                                <input type="text" id="farmerName" placeholder="e.g. Ram Singh" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Commodity</label>
+                                <select id="cropType">
+                                    <option value="Tomatoes">🍅 Tomatoes</option>
+                                    <option value="Onions">🧅 Onions</option>
+                                    <option value="Wheat">🌾 Wheat</option>
+                                    <option value="Mustard">🌼 Mustard</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Quantity (kg)</label>
+                                <input type="number" id="quantity" placeholder="2000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Quality Scan (Photo)</label>
+                                <div class="file-upload">
+                                    <input type="file" id="cropPhoto">
+                                    <span>📸 Upload Image</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-verify">
+                                🔗 Verify & Mint on Sepolia
+                            </button>
+                        </form>
+                        <div id="mint-status" class="mint-status"></div>
+                    </div>
+                </div>
+
+                <div class="right-col">
+
+                    <div class="stats-row"
+                        style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-bottom:20px;">
+                        <div class="stat-card"
+                            style="background:#1e293b; padding:15px; border-radius:12px; border:1px solid #334155;">
+                            <div style="color:#94a3b8; font-size:0.9rem;">📦 Total Stock</div>
+                            <div id="kpi-stock" style="font-size:1.8rem; font-weight:800; color:white;">0 kg</div>
+                        </div>
+                        <div class="stat-card"
+                            style="background:#1e293b; padding:15px; border-radius:12px; border:1px solid #334155;">
+                            <div style="color:#94a3b8; font-size:0.9rem;">🚛 Active Trucks</div>
+                            <div id="kpi-trucks" style="font-size:1.8rem; font-weight:800; color:#3b82f6;">0</div>
+                        </div>
+                        <div class="stat-card"
+                            style="background:#1e293b; padding:15px; border-radius:12px; border:1px solid #334155;">
+                            <div style="color:#94a3b8; font-size:0.9rem;">✅ Verified Vol</div>
+                            <div id="kpi-verified" style="font-size:1.8rem; font-weight:800; color:#10b981;">0 kg</div>
+                        </div>
+                    </div>
+
+                    <div class="filter-row" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto;">
+                        <button class="filter-btn active" onclick="applyFilter('All')">All</button>
+                        <button class="filter-btn" onclick="applyFilter('Tomatoes')">🍅 Tomatoes</button>
+                        <button class="filter-btn" onclick="applyFilter('Onions')">🧅 Onions</button>
+                        <button class="filter-btn" onclick="applyFilter('Wheat')">🌾 Wheat</button>
+                        <button class="filter-btn" onclick="applyFilter('Mustard')">🌼 Mustard</button>
+                    </div>
+
+                    <section class="market-intel">
+                        <div class="section-header">
+                            <h2>💰 Azadpur Live Rates</h2>
+                            <span class="update-badge">Status: Connected</span>
+                        </div>
+                        <div class="price-grid" id="price-grid">Loading...</div>
+                    </section>
+
+                    <section class="logistics-feed">
+                        <h2>🚛 Live Supply Chain</h2>
+                        <div class="card-container" id="feed-container">
+                            Loading...
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{% static 'script.js' %}"></script>
+
+    <style>
+        .filter-btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+    </style>
+</body>
+
+</html>

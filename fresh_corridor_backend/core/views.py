@@ -284,6 +284,75 @@ def get_stations_api(request):
     stations = AQIService.get_stations()
     return Response(stations)
 
+@api_view(['GET'])
+def get_simulated_weather(request):
+    """
+    Returns LIVE weather data from Open-Meteo API.
+    Cached for 10 minutes to prevent rate limiting.
+    """
+    from django.core.cache import cache
+    
+    CACHE_KEY = 'weather_data_delhi'
+    cached_data = cache.get(CACHE_KEY)
+    
+    if cached_data:
+        # Add a flag to indicate cached data for debugging
+        cached_data['_source'] = 'cache'
+        return Response(cached_data)
+
+    try:
+        # Open-Meteo API for New Delhi (28.61, 77.20)
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": 28.61,
+            "longitude": 77.20,
+            "current": "temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m,precipitation,visibility",
+            "timezone": "auto"
+        }
+        
+        r = requests.get(url, params=params, timeout=5)
+        r.raise_for_status()
+        data = r.json().get('current', {})
+        
+        # Helper to convert degrees to cardinal
+        def deg_to_cardinal(deg):
+            dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+            ix = round(deg / (360. / len(dirs)))
+            return dirs[ix % len(dirs)]
+
+        # Map to our app's expected format
+        weather_response = {
+            "temp": data.get('temperature_2m', '--'),
+            "humidity": data.get('relative_humidity_2m', '--'),
+            "windSpeed": data.get('wind_speed_10m', '--'),
+            "windDir": deg_to_cardinal(data.get('wind_direction_10m', 0)),
+            "pressure": round(data.get('surface_pressure', 1013)),
+            "condition": "Clear" if data.get('precipitation', 0) == 0 else "Rainy", # Simple inference
+            "uv": "Moderate", # Open-Meteo basic free tier doesn't fully support UV in 'current' easily without more params, keep static or infer
+            "vis": round(data.get('visibility', 5000) / 1000, 1), # Convert m to km
+            "precipitation": f"{data.get('precipitation', 0)} mm"
+        }
+        
+        # Cache for 10 minutes (600 seconds)
+        cache.set(CACHE_KEY, weather_response, 600)
+        
+        return Response(weather_response)
+
+    except Exception as e:
+        print(f"Weather API Error: {e}")
+        # Fallback to a basic safe state if API fails
+        return Response({
+            "temp": 22.0,
+            "humidity": 45,
+            "windSpeed": 10,
+            "windDir": "N",
+            "pressure": 1013,
+            "condition": "Offline",
+            "uv": "--",
+            "vis": 4.0,
+            "precipitation": "0.0 mm"
+        })
+
 # --- Traffic Monitoring ---
 def traffic_monitor(request):
     """Render the traffic monitoring page"""
@@ -294,6 +363,27 @@ def get_traffic_data(request):
     """API endpoint to fetch real-time traffic data from TomTom"""
     API_KEY = os.getenv('TOMTOM_API_KEY')
     
+    # --- RATE LIMITING (Protect Credits) ---
+    from django.core.cache import cache
+    
+    # Get client IP
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    cache_key = f"traffic_api_limit_{ip}"
+    if cache.get(cache_key):
+        return Response({
+            'status': 'error',
+            'message': 'Rate limit exceeded. Please wait 2 seconds.'
+        }, status=429)
+    
+    # Set cache for 2 seconds (Reduced from 10s for better UX)
+    cache.set(cache_key, True, 2)
+    # --------------------------------------
+
     if not API_KEY:
         return Response({
             'status': 'error',

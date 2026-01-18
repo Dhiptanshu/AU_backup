@@ -12,7 +12,9 @@
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;700&family=Rajdhani:wght@500;600;700&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
 
     <!-- Chart.js -->
@@ -23,13 +25,14 @@
 </head>
 
 <body>
+    <div class="bg-grid-animation"></div>
+    <div class="glow-orb" style="top: -10%; left: -10%;"></div>
+    <div class="glow-orb" style="bottom: -10%; right: -10%; background: var(--secondary-glow);"></div>
 
     <nav class="navbar">
         <div class="brand-logo">
-            <svg width="24" height="24" fill="none" class="text-white" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
+            <img src="{% static 'core/images/logo.png' %}" alt="GeoAnushasan Logo"
+                style="height: 48px; width: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
             GeoAnushashan
         </div>
         <div class="nav-tabs">
@@ -101,14 +104,13 @@
                 <div id="route-analysis-panel"
                     style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.95); padding: 1.2rem; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999;">
                     <h3 style="color:#333; margin-bottom:1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        🗺️ Route Traffic Analysis
+                        <span class="material-icons-sharp" style="font-size: 1.2rem;">traffic</span> Route Analysis
                     </h3>
 
                     <div id="route-instructions"
                         style="background: #f0f9ff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #0369a1; border-left: 3px solid #0284c7;">
                         <strong>📍 Click on map to select points</strong><br>
-                        <span style="font-size: 0.8rem;">Select start and end points to analyze traffic congestion along
-                            the route.</span>
+                        <span style="font-size: 0.8rem;">Select start and end points to check distance & traffic.</span>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
@@ -136,28 +138,45 @@
 
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                         <button id="analyze-route-btn" class="btn-primary"
-                            style="flex: 1; justify-content: center; font-size: 0.9rem;" disabled>
-                            Analyze Traffic
-                        </button>
+                            style="flex: 1; justify-content: center; font-size: 0.9rem;" disabled>Analyze
+                            Traffic</button>
                         <button id="clear-route-btn" class="btn-secondary"
-                            style="padding: 0.6rem 1rem; font-size: 0.9rem;">
-                            Clear
-                        </button>
+                            style="padding: 0.6rem 1rem; font-size: 0.9rem;">Clear</button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="route-loading" style="display: none; text-align: center; margin-top: 1rem;">
+                        <div class="spinner"
+                            style="width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 0.5rem;">
+                        </div>
+                        <span style="font-size: 0.8rem; color: #666;">Analyzing optimal route...</span>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="route-error"
+                        style="display: none; background: #fee2e2; color: #b91c1c; padding: 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 1rem;">
                     </div>
 
                     <div id="route-results" style="display: none;">
                         <div style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
-                            <div style="text-align: center; margin-bottom: 1rem;">
-                                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.3rem;">Average
-                                    Congestion</div>
-                                <div id="route-avg-congestion"
-                                    style="font-size: 2.5rem; font-weight: bold; color: var(--primary-color);">--</div>
-                                <div id="route-congestion-level"
-                                    style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; margin-top: 0.3rem;">
-                                    --</div>
+                            <!-- Congestion Level Header -->
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div style="font-size: 0.9rem; font-weight: 600;">Congestion Level</div>
+                                <div id="route-congestion-level" class="badge">--</div>
                             </div>
+
+                            <!-- Simplified Result Grid -->
                             <div
                                 style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.85rem;">
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Avg Congestion</div>
+                                    <div id="route-avg-congestion" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Avg Speed</div>
+                                    <div id="route-avg-speed" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
                                 <div>
                                     <div style="color: #64748b; margin-bottom: 0.2rem;">Distance</div>
                                     <div id="route-distance" style="font-weight: 600; color: #334155;">--</div>
@@ -166,73 +185,130 @@
                                     <div style="color: #64748b; margin-bottom: 0.2rem;">Est. Time</div>
                                     <div id="route-time" style="font-weight: 600; color: #334155;">--</div>
                                 </div>
-                                <div>
-                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Avg Speed</div>
-                                    <div id="route-avg-speed" style="font-weight: 600; color: #334155;">--</div>
-                                </div>
-                                <div>
-                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Check Points</div>
-                                    <div id="route-checkpoints" style="font-weight: 600; color: #334155;">--</div>
-                                </div>
+                            </div>
+
+                            <div style="margin-top: 0.8rem; font-size: 0.75rem; color: #94a3b8; text-align: center;">
+                                Based on <span id="route-checkpoints">0</span> real-time checkpoints
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- Urban Control Center Overlay (Title Only Initially, or Hidden) -->
+                <!-- HIDDEN BY DEFAULT: Toggled by JS on Selection -->
+                <div id="urban-control-center" class="urban-control-center"
+                    style="position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.95); border-radius: 12px; width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 999; display: none; flex-direction: column; overflow: hidden; max-height: 85vh;">
 
-                    <div id="route-loading"
-                        style="display: none; text-align: center; padding: 1rem; border-top: 2px solid #e2e8f0; margin-top: 1rem;">
-                        <div class="spinner" style="width: 30px; height: 30px; margin: 0 auto 0.5rem;"></div>
-                        <div style="font-size: 0.85rem; color: #64748b;">Analyzing route...</div>
+                    <!-- Header -->
+                    <div
+                        style="padding: 1rem; background: var(--primary-color); color: white; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="margin:0; font-size:1.1rem;">Urban Control Center</h3>
+                            <div style="font-size:0.8rem; opacity:0.9;">Zone: <span id="ucc-zone-name">Selected
+                                    Zone</span></div>
+                        </div>
+                        <button onclick="closeUrbanControl()"
+                            style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">&times;</button>
                     </div>
 
-                    <div id="route-error"
-                        style="display: none; padding: 0.8rem; background: #fee; border: 1px solid #fcc; color: #c33; border-radius: 6px; margin-top: 1rem; font-size: 0.85rem;">
+                    <!-- Tabs -->
+                    <div style="display:flex; background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+                        <button class="uc-tab active" onclick="switchUrbanTab('uc-weather', this)">Weather</button>
+                        <button class="uc-tab" onclick="switchUrbanTab('uc-aqi', this)">AQI</button>
+                        <button class="uc-tab" onclick="switchUrbanTab('uc-market', this)">Market</button>
+                        <button class="uc-tab" onclick="switchUrbanTab('uc-health', this)">Health</button>
+                    </div>
+
+                    <!-- Content Area -->
+                    <div style="flex:1; overflow-y:auto; padding:1rem;">
+
+                        <!-- 1. WEATHER TAB -->
+                        <div id="uc-weather" class="uc-content active">
+                            <h4 style="margin-top:0;">Weather Conditions</h4>
+                            <div class="sim-card">
+                                <label>Current Condition</label>
+                                <select id="sim-weather-type" class="form-select">
+                                    <option value="clear">Clear Sky</option>
+                                    <option value="rain">Heavy Rainfall (50mm/hr)</option>
+                                    <option value="heat">Heatwave (>45°C)</option>
+                                    <option value="storm">Dust Storm</option>
+                                </select>
+                            </div>
+                            <button class="btn-primary full-width" onclick="runUrbanSimulation('weather')">Simulate
+                                Impact</button>
+                            <div id="res-weather" class="sim-result" style="display:none;"></div>
+                        </div>
+
+                        <!-- 2. AQI TAB -->
+                        <div id="uc-aqi" class="uc-content">
+                            <h4 style="margin-top:0;">Air Quality Monitor</h4>
+                            <div id="uc-aqi-list" class="mini-list">Loading stations...</div>
+
+                            <hr style="margin:1rem 0; border:0; border-top:1px solid #eee;">
+
+                            <h4 style="margin-top:0;">Simulation</h4>
+                            <div class="sim-card">
+                                <label>Simulate PM2.5 Spike</label>
+                                <input type="range" id="sim-aqi-slider" min="50" max="500" value="100" class="slider"
+                                    oninput="document.getElementById('sim-aqi-val').innerText = this.value">
+                                <div style="text-align:right; font-weight:bold; color:var(--primary-color);">Level:
+                                    <span id="sim-aqi-val">100</span>
+                                </div>
+                            </div>
+                            <button class="btn-primary full-width" onclick="runUrbanSimulation('aqi')">Simulate Health
+                                Impact</button>
+                            <div id="res-aqi" class="sim-result" style="display:none;"></div>
+                        </div>
+
+                        <!-- 3. MARKET TAB -->
+                        <div id="uc-market" class="uc-content">
+                            <h4 style="margin-top:0;">Agri-Market Pulse</h4>
+                            <div id="uc-market-list" class="mini-list">Loading market data...</div>
+
+                            <hr style="margin:1rem 0; border:0; border-top:1px solid #eee;">
+
+                            <h4 style="margin-top:0;">Supply Chain Simulation</h4>
+                            <div class="sim-card">
+                                <label>Event Scenario</label>
+                                <select id="sim-market-event" class="form-select">
+                                    <option value="normal">Normal Operations</option>
+                                    <option value="blockade">Transport Strike (Supply -40%)</option>
+                                    <option value="spoilage">Mass Spoilage (Loss -25%)</option>
+                                </select>
+                            </div>
+                            <button class="btn-primary full-width" onclick="runUrbanSimulation('market')">Simulate Price
+                                Impact</button>
+                            <div id="res-market" class="sim-result" style="display:none;"></div>
+                        </div>
+
+                        <!-- 4. HEALTH TAB -->
+                        <div id="uc-health" class="uc-content">
+                            <h4 style="margin-top:0;">Hospital Grid</h4>
+                            <div id="uc-health-list" class="mini-list">Loading hospitals...</div>
+
+                            <hr style="margin:1rem 0; border:0; border-top:1px solid #eee;">
+
+                            <h4 style="margin-top:0;">Emergency Simulation</h4>
+                            <div class="sim-card">
+                                <label>Emergency Type</label>
+                                <select id="sim-health-event" class="form-select">
+                                    <option value="normal">Normal Flow</option>
+                                    <option value="surge">Epidemic Surge (Load +30%)</option>
+                                    <option value="accident">Mass Casualty Event</option>
+                                </select>
+                            </div>
+                            <button class="btn-primary full-width" onclick="runUrbanSimulation('health')">Simulate
+                                Network
+                                Load</button>
+                            <div id="res-health" class="sim-result" style="display:none;"></div>
+                        </div>
+
                     </div>
                 </div>
 
-                <!-- Overlay Simulation Controls -->
-                <!-- Overlay Simulation Controls -->
-                <div id="sim-panel"
-                    style="position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 1.2rem; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999; display:none;">
-                    <h3
-                        style="color:#333; margin-bottom:1rem; font-size:1.1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
-                        ⚡ What-If Simulation Suite
-                    </h3>
-
-                    <div style="margin-bottom:1rem;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Rainfall
-                            Intensity Increase</label>
-                        <input type="range" id="sim-rain" min="0" max="100" value="0" style="width:100%"
-                            oninput="document.getElementById('display-rain').innerText = this.value + '%'">
-                        <div style="text-align:right; font-size:0.8rem; color:#666;" id="display-rain">0%</div>
-                    </div>
-
-                    <div style="margin-bottom:1.5rem;">
-                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Traffic
-                            Load Increase</label>
-                        <input type="range" id="sim-traffic" min="0" max="100" value="0" style="width:100%"
-                            oninput="document.getElementById('display-traffic').innerText = this.value + '%'">
-                        <div style="text-align:right; font-size:0.8rem; color:#666;" id="display-traffic">0%</div>
-                    </div>
-
-                    <button class="btn-primary" onclick="runSimulation()"
-                        style="width:100%; justify-content:center;">Run Simulation</button>
-
-                    <div id="sim-results"
-                        style="margin-top:1rem; font-size:0.85rem; background:#f8fafc; padding:0.8rem; border-radius:6px; display:none;">
-                        <div style="font-weight:700; color:#334155; margin-bottom:0.5rem;">Predicted Impact:</div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
-                            <span>🚦 Traffic Congestion:</span>
-                            <span id="res-traffic" style="font-weight:600;">--</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
-                            <span>🚑 Amb. Response:</span>
-                            <span id="res-ambulance" style="font-weight:600;">--</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <span>🌊 Flood Risk:</span>
-                            <span id="res-flood" style="font-weight:600;">--</span>
-                        </div>
-                    </div>
+                <!-- Guidance Overlay -->
+                <div id="urban-hint"
+                    style="position:absolute; top:20px; left:20px; background:rgba(0,0,0,0.6); color:white; padding:10px 15px; border-radius:30px; font-size:0.9rem; pointer-events:none; z-index:998;">
+                    👈 Select a <strong>Zone</strong> on the map to open Control Center
                 </div>
 
                 <!-- Resilience Score Panel (Top Center) -->
@@ -255,6 +331,103 @@
                             <div id="metric-med" style="font-weight:600; color:#334155;">--</div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- NEW: Urban Nexus Dashboard Grid -->
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--text-main);">🏙️ Consolidated Urban Metrics</h3>
+                <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));">
+
+                    <!-- 1. Detailed Weather Card -->
+                    <div class="card">
+                        <h3>🌤️ Weather Conditions</h3>
+                        <div
+                            style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                            <div id="dash-weather-temp" style="font-size:3.5rem;">28°C</div>
+                            <div style="text-align:right;">
+                                <div style="font-size:1.2rem; font-weight:600;">Partly Cloudy</div>
+                                <div style="color:var(--text-muted);">RealFeel: 31°C</div>
+                            </div>
+                        </div>
+                        <div
+                            style="display:flex; justify-content:space-between; background:#f8fafc; padding:1rem; border-radius:8px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:0.9rem; color:var(--text-muted);">Humidity</div>
+                                <div style="font-weight:600;" id="dash-weather-hum">45%</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.9rem; color:var(--text-muted);">Wind</div>
+                                <div style="font-weight:600;" id="dash-weather-wind">12 km/h</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.9rem; color:var(--text-muted);">UV Index</div>
+                                <div style="font-weight:600;">Moderate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. AQI Hotspots Card -->
+                    <div class="card">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h3>😷 AQI Hotspots</h3>
+                            <span class="badge bg-warning" id="dash-aqi-status">Moderate</span>
+                        </div>
+                        <div
+                            style="display:flex; justify-content:space-between; padding:0.5rem; background:#f1f5f9; font-weight:600; font-size:0.85rem; border-radius:4px;">
+                            <span>Station Name</span>
+                            <span>Level</span>
+                        </div>
+                        <div id="dash-aqi-list" style="max-height: 200px; overflow-y: auto; margin-top:0.5rem;">
+                            Loading hotspots...
+                        </div>
+                    </div>
+
+                    <!-- 3. Market Rates Card -->
+                    <div class="card">
+                        <h3>🍅 Mandi Live Rates</h3>
+                        <div class="table-container" style="max-height:220px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                                <thead style="background:#f8fafc; position:sticky; top:0;">
+                                    <tr>
+                                        <th style="text-align:left; padding:8px;">Commodity</th>
+                                        <th style="text-align:right; padding:8px;">Price (₹/kg)</th>
+                                        <th style="padding:8px;">Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-market-table">
+                                    <tr>
+                                        <td colspan="3" style="padding:10px; text-align:center;">Loading Market Data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 4. Hospital Status Card -->
+                    <div class="card">
+                        <h3>🏥 Hospital Network Status</h3>
+                        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                            <div
+                                style="flex:1; background:#eff6ff; padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.5rem; font-weight:bold; color:#1d4ed8;" id="dash-beds-icu">--
+                                </div>
+                                <div style="font-size:0.85rem;">Available ICU</div>
+                            </div>
+                            <div
+                                style="flex:1; background:#f0fdf4; padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.5rem; font-weight:bold; color:#15803d;" id="dash-beds-gen">--
+                                </div>
+                                <div style="font-size:0.85rem;">General Ward</div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.85rem; color:#64748b; text-align:center;">
+                            Monitored Zones: Central, North, South-East
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -583,24 +756,183 @@
         <!-- Tab 4: Citizen -->
         <div id="citizen" class="tab-content">
             <h2 style="margin-bottom:1.5rem;">Citizen Connect Pulse</h2>
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h3>My Safety Score</h3>
-                    <div style="text-align:center; padding:1rem;">
-                        <div style="font-size:3rem; font-weight:800; color:#0d9488;">92</div>
-                        <div style="color:#0f766e; font-weight:600;">EXCELLENT</div>
-                        <p style="font-size:0.9rem; color:#666;">Based on AQI, Food Access, and Safety Reports in your
-                            zone.</p>
+
+            <!-- Citizen Map (Cesium) -->
+            <div class="card" style="padding:0; border:none; height:600px; margin-bottom:1.5rem; position:relative;">
+                <div id="citizenMapContainer" style="width:100%; height:100%;"></div>
+
+                <!-- COPIED: Route Traffic Analysis Panel (Citizen Version) -->
+                <div id="cit-route-analysis-panel"
+                    style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.95); padding: 1.2rem; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999;">
+                    <h3 style="color:#333; margin-bottom:1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        🗺️ Citizen Route Planner
+                    </h3>
+
+                    <div id="cit-route-instructions"
+                        style="background: #f0f9ff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #0369a1; border-left: 3px solid #0284c7;">
+                        <strong>📍 Click on map to select points</strong><br>
+                        <span style="font-size: 0.8rem;">Select start and end points to check distance & traffic.</span>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem; background: #f8fafc; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <span
+                                style="width: 24px; height: 24px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.75rem;">A</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: #64748b;">Start Point</div>
+                                <div id="cit-point-a-coords"
+                                    style="font-size: 0.85rem; font-weight: 600; color: #334155;">Not selected</div>
+                            </div>
+                        </div>
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem; background: #f8fafc; border-radius: 6px;">
+                            <span
+                                style="width: 24px; height: 24px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.75rem;">B</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: #64748b;">End Point</div>
+                                <div id="cit-point-b-coords"
+                                    style="font-size: 0.85rem; font-weight: 600; color: #334155;">Not selected</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <button id="cit-analyze-route-btn" class="btn-primary"
+                            style="flex: 1; justify-content: center; font-size: 0.9rem;" disabled>Analyze Route</button>
+                        <button id="cit-clear-route-btn" class="btn-secondary"
+                            style="padding: 0.6rem 1rem; font-size: 0.9rem;">Clear</button>
+                    </div>
+
+                    <div id="cit-route-loading" style="display: none; text-align: center; margin-top: 1rem;">
+                        <div class="spinner"
+                            style="width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 0.5rem;">
+                        </div>
+                        <span style="font-size: 0.8rem; color: #666;">Analyzing optimal route...</span>
+                    </div>
+
+                    <div id="cit-route-error"
+                        style="display: none; background: #fee2e2; color: #b91c1c; padding: 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 1rem;">
+                    </div>
+
+                    <div id="cit-route-results" style="display: none;">
+                        <div style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
+                            <!-- Simplified Result Grid -->
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.85rem;">
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Distance</div>
+                                    <div id="cit-route-distance" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Est. Time</div>
+                                    <div id="cit-route-time" style="font-weight: 600; color: #334155;">--</div>
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <div style="color: #64748b; margin-bottom: 0.2rem;">Congestion Level</div>
+                                    <div id="cit-route-avg-congestion"
+                                        style="font-weight: bold; color: var(--primary-color);">--</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- RESTORED: Weather Monitor -->
+            <h3 style="margin-bottom:1rem; color:var(--text-main);">☁️ Real-Time Weather Monitor</h3>
+            <div class="dashboard-grid"
+                style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom:2rem;">
+
+                <!-- 1. Temperature -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">🌡️</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Temperature</div>
+                    <div id="w-temp" style="font-size:1.5rem; font-weight:bold; color:#f97316;">--°C</div>
+                    <small style="color:#94a3b8;">Avg: 30°C</small>
+                </div>
+
+                <!-- 2. Humidity -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">💧</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Humidity</div>
+                    <div id="w-humidity" style="font-size:1.5rem; font-weight:bold; color:#3b82f6;">--%</div>
+                    <small style="color:#94a3b8;">Moist Air</small>
+                </div>
+
+                <!-- 3. Precipitation -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">🌧️</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Precipitation</div>
+                    <div id="w-precip" style="font-size:1.5rem; font-weight:bold; color:#64748b;">--mm</div>
+                    <small style="color:#94a3b8;">Last 24h</small>
+                </div>
+
+                <!-- 4. Pressure -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">⏲️</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Pressure</div>
+                    <div id="w-pressure" style="font-size:1.5rem; font-weight:bold; color:#10b981;">-- hPa</div>
+                    <small style="color:#94a3b8;">Barometer</small>
+                </div>
+
+                <!-- 5. Wind -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">💨</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Wind</div>
+                    <div id="w-wind" style="font-size:1.3rem; font-weight:bold; color:#6366f1;">-- km/h</div>
+                    <small id="w-dir" style="color:#94a3b8;">Direction: --</small>
+                </div>
+
+
+
+                <!-- 7. Visibility -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:2rem;">👁️</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin:5px 0;">Visibility</div>
+                    <div id="w-vis" style="font-size:1.5rem; font-weight:bold; color:#10b981;">-- km</div>
+                    <small style="color:#94a3b8;">Clear View</small>
+                </div>
+            </div>
+
+            <!-- COPIED: Traffic Monitor (Citizen Version) -->
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--text-main);">🚦 Traffic Congestion Monitor</h3>
+                <div class="traffic-controls card" style="margin-bottom: 1.5rem; padding: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label
+                                style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Latitude:</label>
+                            <input type="text" id="cit-traffic-latitude" value="28.6139"
+                                style="width: 100%; padding: 0.6rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.95rem;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label
+                                style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Longitude:</label>
+                            <input type="text" id="cit-traffic-longitude" value="77.2090"
+                                style="width: 100%; padding: 0.6rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.95rem;">
+                        </div>
+                        <button id="cit-fetchTrafficBtn" class="btn-primary" style="padding: 0.6rem 1.5rem;">Check
+                            Status</button>
+                    </div>
+                </div>
+                <!-- Simple Result Area for Citizen Tab -->
+                <div id="cit-traffic-results" class="card" style="display:none; text-align:center;">
+                    <h3>Traffic Status</h3>
+                    <div id="cit-traffic-status" style="font-size:1.5rem; font-weight:bold;">--</div>
+                    <div id="cit-traffic-details"></div>
+                </div>
+            </div>
+
+            <!-- AQI & Safety Section -->
+            <div class="dashboard-grid" style="margin-top:2rem;">
+
                 <div class="card">
                     <h3>Top AQI Hotspots</h3>
-                    <div id="aqi-hotspots-list" style="min-height: 100px;">Loading hotspots...</div>
+                    <!-- Unique ID for Citizen Tab -->
+                    <div id="cit-aqi-hotspots-list" style="min-height: 100px;">Loading hotspots...</div>
                 </div>
-                <div class="card">
-                    <h3>Recent Community Reports</h3>
-                    <div id="citizen-reports">Loading...</div>
-                </div>
+
             </div>
         </div>
     </div>
@@ -635,19 +967,7 @@
     </div>
 
     <!-- Custom JS -->
-    <script>
-        function switchTab(tabId, el) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            if (el) el.classList.add('active');
 
-            if (tabId === 'urban') setTimeout(initCesium, 100);
-            if (tabId === 'health') loadHealthData();
-            if (tabId === 'agri') loadAgriData();
-            if (tabId === 'citizen') loadCitizenData();
-        }
-    </script>
     <script src="{% static 'core/js/app.js' %}"></script>
 </body>
 
