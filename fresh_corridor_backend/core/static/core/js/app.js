@@ -1558,6 +1558,12 @@ async function fetchCitizenWeather() {
         if (document.getElementById('w-vis')) document.getElementById('w-vis').innerText = data.vis + " km";
         if (document.getElementById('w-precip')) document.getElementById('w-precip').innerText = data.precipitation;
 
+        // Update Header Weather
+        const headerWeather = document.getElementById('header-weather-text');
+        if (headerWeather) {
+            headerWeather.innerHTML = `New Delhi | <strong>${data.temp}°C</strong>`;
+        }
+
         return data; // Return for reuse
     } catch (e) {
         console.error("Weather Fetch Error", e);
