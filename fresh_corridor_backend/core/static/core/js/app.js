@@ -1850,28 +1850,41 @@ async function analyzeCitizenRouteTraffic() {
     }
 }
 
-f u n c t i o n   s w i t c h U r b a n T a b ( t a b I d ,   b t n )   {  
-         / /   H i d e   a l l   t a b   c o n t e n t  
-         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' . u c - c o n t e n t ' ) . f o r E a c h ( c o n t e n t   = >   {  
-                 c o n t e n t . c l a s s L i s t . r e m o v e ( ' a c t i v e ' ) ;  
-                 c o n t e n t . s t y l e . d i s p l a y   =   ' n o n e ' ;   / /   E n s u r e   d i s p l a y   n o n e   i s   a p p l i e d  
-         } ) ;  
-  
-         / /   R e m o v e   a c t i v e   c l a s s   f r o m   a l l   b u t t o n s  
-         d o c u m e n t . q u e r y S e l e c t o r A l l ( ' . u c - t a b ' ) . f o r E a c h ( t a b   = >   {  
-                 t a b . c l a s s L i s t . r e m o v e ( ' a c t i v e ' ) ;  
-         } ) ;  
-  
-         / /   S h o w   s e l e c t e d   t a b  
-         c o n s t   s e l e c t e d C o n t e n t   =   d o c u m e n t . g e t E l e m e n t B y I d ( t a b I d ) ;  
-         i f   ( s e l e c t e d C o n t e n t )   {  
-                 s e l e c t e d C o n t e n t . c l a s s L i s t . a d d ( ' a c t i v e ' ) ;  
-                 s e l e c t e d C o n t e n t . s t y l e . d i s p l a y   =   ' b l o c k ' ;  
-         }  
-  
-         / /   S e t   a c t i v e   b u t t o n  
-         i f   ( b t n )   {  
-                 b t n . c l a s s L i s t . a d d ( ' a c t i v e ' ) ;  
-         }  
- }  
- 
+
+
+// Helper: Get Congestion Level Object
+function getTrafficCongestionLevel(score) {
+    if (score < 25) return { label: 'Low', class: 'level-low' };
+    if (score < 50) return { label: 'Moderate', class: 'level-moderate' };
+    if (score < 75) return { label: 'High', class: 'level-high' };
+    return { label: 'Severe', class: 'level-severe' };
+}
+
+function showTrafficUpdateNotification() {
+    if (window.showToast) window.showToast("Traffic data updated", "info");
+}
+
+function switchUrbanTab(tabId, btn) {
+    // Hide all tab content
+    document.querySelectorAll('.uc-content').forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+    });
+
+    // Remove active class from all buttons
+    document.querySelectorAll('.uc-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected tab
+    const selectedContent = document.getElementById(tabId);
+    if (selectedContent) {
+        selectedContent.classList.add('active');
+        selectedContent.style.display = 'block';
+    }
+
+    // Set active button
+    if (btn) {
+        btn.classList.add('active');
+    }
+}
