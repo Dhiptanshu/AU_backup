@@ -4,14 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fresh Corridor Nexus | Smart Urban Logistics</title>
+    <title>GeoAnushasan | Smart Urban Logistics</title>
 
     <!-- CesiumJS -->
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;700&family=Rajdhani:wght@500;600;700&display=swap"
+        rel="stylesheet">
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -21,14 +23,15 @@
 </head>
 
 <body>
+    <div class="bg-grid-animation"></div>
+    <div class="glow-orb" style="top: -10%; left: -10%;"></div>
+    <div class="glow-orb" style="bottom: -10%; right: -10%; background: var(--secondary-glow);"></div>
 
     <nav class="navbar">
         <div class="brand-logo">
-            <svg width="24" height="24" fill="none" class="text-white" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            FRESH CORRIDOR
+            <img src="logo.png" alt="GeoAnushasan Logo"
+                style="height: 48px; width: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+            GeoAnushasan
         </div>
         <div class="nav-tabs">
             <div class="nav-tab active" onclick="switchTab('urban', this)">Urban Nexus</div>
@@ -52,23 +55,21 @@
             <div class="card" style="padding:0; border:none; height:600px;">
                 <div id="cesiumContainer"></div>
                 <!-- Overlay Simulation Controls -->
-                <div
-                    style="position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 1.2rem; border-radius: 8px; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999;">
-                    <h3 style="color:#333; margin-bottom:1rem;">What-If Simulation</h3>
-                    <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;">Event
+                <div class="card simulation-overlay">
+                    <h3>What-If Simulation</h3>
+                    <label
+                        style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:0.5rem; color: var(--text-muted);">Event
                         Type</label>
-                    <select
-                        style="width:100%; padding:0.5rem; margin-bottom:1rem; border-radius:4px; border:1px solid #ccc;">
+                    <select>
                         <option>Heavy Rainfall (50mm/hr)</option>
                         <option>Road Closure (Zone B)</option>
                         <option>Heatwave (>45°C)</option>
                     </select>
                     <button class="btn-primary" style="width:100%; justify-content:center;">Run Simulation</button>
-                    <div
-                        style="margin-top:1rem; font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:0.5rem;">
-                        <strong>Predicted Impact:</strong><br>
-                        • Amb. Delay: +12 mins<br>
-                        • Spoilage Risk: High
+                    <div class="info-text">
+                        <strong style="color:var(--col-4-mauve);">Predicted Impact:</strong><br>
+                        • Amb. Delay: <span style="color:var(--col-3-terra)">+12 mins</span><br>
+                        • Spoilage Risk: <span style="color:var(--col-3-terra)">High</span>
                     </div>
                 </div>
             </div>
@@ -179,10 +180,10 @@
                 <div class="card">
                     <h3>My Safety Score</h3>
                     <div style="text-align:center; padding:1rem;">
-                        <div style="font-size:3rem; font-weight:800; color:#0d9488;">92</div>
-                        <div style="color:#0f766e; font-weight:600;">EXCELLENT</div>
-                        <p style="font-size:0.9rem; color:#666;">Based on AQI, Food Access, and Safety Reports in your
-                            zone.</p>
+                        <div class="score-value">92</div>
+                        <div class="score-label">EXCELLENT</div>
+                        <p style="font-size:0.9rem; color:var(--text-muted); margin-top:1rem;">Based on AQI, Food
+                            Access, and Safety Reports in your zone.</p>
                     </div>
                 </div>
                 <div class="card">
@@ -204,16 +205,14 @@
             <h2 id="modal-station-name" style="margin-top:0;">Station Details</h2>
             <div id="modal-station-location" style="color:var(--text-muted); margin-bottom:1rem;">Location</div>
 
-            <div
-                style="display:flex; align-items:center; gap:1rem; margin-bottom:2rem; background:#f8fafc; padding:1.5rem; border-radius:12px;">
+            <div class="modal-stat-box">
                 <div>
                     <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">AQI INDEX</div>
-                    <div id="modal-aqi" style="font-size:2.5rem; font-weight:800;">--</div>
+                    <div id="modal-aqi" class="p-val" style="font-size:2.5rem;">--</div>
                 </div>
-                <div style="flex:1; border-left:2px solid #e2e8f0; padding-left:1.5rem;">
+                <div style="flex:1; border-left:1px solid var(--card-border); padding-left:1.5rem;">
                     <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">PREDOMINANT</div>
-                    <div id="modal-predominant" style="font-size:1.5rem; font-weight:700; color:var(--primary-color);">
-                        --</div>
+                    <div id="modal-predominant" class="p-val">--</div>
                 </div>
             </div>
 

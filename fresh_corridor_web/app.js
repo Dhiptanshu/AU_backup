@@ -39,7 +39,7 @@ async function fetchZonesForMap() {
         zones.forEach(z => {
             viewer.entities.add({
                 position: Cesium.Cartesian3.fromDegrees(z.longitude, z.latitude),
-                point: { pixelSize: 10, color: Cesium.Color.fromCssColorString('#0d9488') },
+                point: { pixelSize: 10, color: Cesium.Color.fromCssColorString('#A66B67') },
                 label: {
                     text: z.name,
                     font: '14px sans-serif',
@@ -47,18 +47,72 @@ async function fetchZonesForMap() {
                 }
             });
         });
+
+        // Setup Simulation Interactivity
+        setTimeout(setupSimulation, 1000);
     } catch (e) { console.error("Map Data Error", e); }
 }
 
+function setupSimulation() {
+    const selector = document.querySelector('.simulation-overlay select');
+    const impactText = document.querySelector('.simulation-overlay .info-text');
+    const btn = document.querySelector('.simulation-overlay .btn-primary');
+
+    if (selector && impactText) {
+        selector.addEventListener('change', (e) => {
+            const val = e.target.value;
+            let impactHtml = '';
+            if (val.includes('Rainfall')) {
+                impactHtml = `<strong>Predicted Impact:</strong><br>• Amb. Delay: <span style="color:var(--col-3-terra)">+12 mins</span><br>• Spoilage Risk: <span style="color:var(--col-3-terra)">High</span>`;
+            } else if (val.includes('Road')) {
+                impactHtml = `<strong>Predicted Impact:</strong><br>• Amb. Delay: <span style="color:var(--col-3-terra)">+45 mins</span><br>• Rerouting: <span style="color:var(--col-6-gold)">Zone C</span>`;
+            } else if (val.includes('Heatwave')) {
+                impactHtml = `<strong>Predicted Impact:</strong><br>• Cooling Load: <span style="color:var(--col-3-terra)">+30%</span><br>• Spoilage Risk: <span style="color:var(--col-3-terra)">Critical</span>`;
+            }
+            impactText.innerHTML = impactHtml;
+        });
+    }
+
+    if (btn) {
+        btn.addEventListener('click', () => {
+            btn.innerHTML = 'Simulating...';
+            setTimeout(() => { btn.innerHTML = 'Run Simulation'; alert('Simulation Complete: Logistics Rerouted.'); }, 1500);
+        });
+    }
+}
+
 // 2. TAB LOGIC
-function switchTab(tabId) {
-    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    // Note: 'event' is deprecated/global in some contexts, strictly we should pass it, but for simple DOM it works.
-    // Better practice: allow the caller to pass 'this' or use event listener. 
-    // For now we assume inline onclick passes event implicitly or we find the element by other means.
-    // We'll update the inline HTML to pass 'this'.
+function switchTab(tabId, el) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    // Activate target content
+    const content = document.getElementById(tabId);
+    if (content) content.classList.add('active');
+
+    // Activate clicked tab
+    // If 'el' is passed (from inline HTML), use it. 
+    // If not, try to find the tab that corresponds to this ID (fallback).
+    if (el) {
+        el.classList.add('active');
+    } else {
+        // Fallback: try to find a tab with matching onclick
+        const matchingTab = Array.from(document.querySelectorAll('.nav-tab')).find(t => t.getAttribute('onclick')?.includes(tabId));
+        if (matchingTab) matchingTab.classList.add('active');
+    }
+
+    // Trigger specific load functions if needed
+    if (tabId === 'urban' || tabId === 'health' || tabId === 'agri') {
+        document.body.classList.add('cyber-theme');
+    } else {
+        document.body.classList.remove('cyber-theme');
+    }
+
+    if (tabId === 'urban') initCesium();
+    if (tabId === 'health') loadHealthData();
+    if (tabId === 'agri') loadAgriData();
+    if (tabId === 'citizen') loadCitizenData();
 }
 
 // 3. HEALTH DATA
@@ -88,15 +142,15 @@ async function loadHealthData() {
 
         // Render Epi
         document.getElementById('epi-list').innerHTML = epi.map(e => `
-            <div style="padding:0.8rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+            <div style="padding:0.8rem; border-bottom:1px solid var(--col-2-taupe); display:flex; justify-content:space-between;">
                 <strong>${e.zone_name}</strong>
-                <span style="color:${e.resp_cases > 50 ? 'red' : 'orange'}">Cases: ${e.resp_cases} (AQI ${e.aqi})</span>
+                <span style="color:${e.resp_cases > 50 ? 'var(--col-3-terra)' : 'var(--col-6-gold)'}">Cases: ${e.resp_cases} (AQI ${e.aqi})</span>
             </div>`).join('');
 
         // Render Deserts
         const dElem = document.getElementById('desert-alerts');
-        if (deserts.length === 0) dElem.innerHTML = '<div style="padding:1rem;color:green;">No Health Deserts</div>';
-        else dElem.innerHTML = deserts.map(d => `<div style="padding:0.8rem; background:#fff1f2; margin-bottom:0.5rem; border-left:3px solid red;">
+        if (deserts.length === 0) dElem.innerHTML = '<div style="padding:1rem;color:var(--col-5-sage);">No Health Deserts</div>';
+        else dElem.innerHTML = deserts.map(d => `<div class="alert-box danger">
             <strong>Health Desert: ${d.name}</strong><br><small>High Vulnerability Zone</small></div>`).join('');
     } catch (e) { console.error("Health Data Error", e); }
 }
@@ -130,12 +184,12 @@ async function loadCitizenData() {
         const reports = await res.json();
 
         const cElem = document.getElementById('citizen-reports');
-        if (reports.length === 0) cElem.innerHTML = '<div style="padding:1rem;color:#666;">No recent reports in your area.</div>';
+        if (reports.length === 0) cElem.innerHTML = '<div style="padding:1rem;color:var(--text-muted);">No recent reports in your area.</div>';
         else cElem.innerHTML = reports.map(r => `
-            <div style="padding:0.8rem; border-bottom:1px solid #eee;">
+            <div style="padding:0.8rem; border-bottom:1px solid var(--col-2-taupe);">
                 <span class="badge bg-warning">${r.report_type}</span>
                 <div style="margin-top:0.4rem; font-weight:500;">${r.description}</div>
-                <div style="font-size:0.8rem; color:#888;">${new Date(r.timestamp).toLocaleDateString()} • ${r.zone_name}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(r.timestamp).toLocaleDateString()} • ${r.zone_name}</div>
             </div>
         `).join('');
     } catch (e) { console.error(e); }
@@ -182,9 +236,9 @@ async function loadAQIHotspots() {
             <div class="hotspot-item" onclick="openStationModal('${s.name}')">
                 <div>
                     <div style="font-weight:600;">${s.city}</div>
-                    <div style="font-size:0.8rem; color:#666;">${s.name}</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">${s.name}</div>
                 </div>
-                <div class="badge ${cls}" style="font-size:0.9rem;">AQI ${val}</div>
+                <div class="badge ${cls}" style="font-size:0.9rem; color:var(--col-1-cream);">AQI ${val}</div>
             </div>
             `;
         }).join('');
@@ -211,11 +265,11 @@ function openStationModal(stationName) {
             <div class="pollutant-card">
                 <div class="p-label">${p.id}</div>
                 <div class="p-val">${p.avg || '--'}</div>
-                <div style="font-size:0.7rem; color:#666; margin-top:4px;">Min ${p.min} / Max ${p.max}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">Min ${p.min} / Max ${p.max}</div>
             </div>
         `).join('');
     } else {
-        pGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">No detailed pollutant data.</div>';
+        pGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No detailed pollutant data.</div>';
     }
 
     document.getElementById('station-modal').classList.add('active');
