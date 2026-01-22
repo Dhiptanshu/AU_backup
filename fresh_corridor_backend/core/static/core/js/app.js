@@ -444,12 +444,89 @@ async function loadHealthData() {
             }).join('');
         }
 
-        // Render Deserts
-        const dElem = document.getElementById('desert-alerts');
-        if (deserts.length === 0) dElem.innerHTML = '<div style="padding:1rem;color:green;">No Health Deserts</div>';
-        else dElem.innerHTML = deserts.map(d => `<div style="padding:0.8rem; background:rgba(239, 68, 68, 0.1); margin-bottom:0.5rem; border-left:3px solid #ef4444; border-radius: 4px;">
-            <strong style="color:var(--text-main);">Health Desert: ${d.name}</strong><br><small style="color:var(--text-muted);">High Vulnerability Zone</small></div>`).join('');
+        // Render AQI Heatmap
+        renderAQIHeatmap(aqiList);
+
     } catch (e) { console.error("Health Data Error", e); }
+}
+
+function renderAQIHeatmap(data) {
+    const grid = document.getElementById('aqi-heatmap-grid');
+    if (!grid) return;
+
+    // 1. Identify Stations (X-Axis)
+    const stations = data.length > 0 ? data.slice(0, 15) : [
+        { name: 'Lodhi Road' }, { name: 'RK Puram' }, { name: 'ITO' }, { name: 'Dwarka' }, { name: 'Okhla' },
+        { name: 'Siri Fort' }, { name: 'Anand Vihar' }, { name: 'Mandir Marg' }, { name: 'Punjabi Bagh' }, { name: 'NSIT Dwarka' },
+        { name: 'DTU Rohini' }, { name: 'North Campus' }, { name: 'Civil Lines' }, { name: 'Wazirpur' }, { name: 'Shadipur' }
+    ];
+
+    // 2. Define Months (Y-Axis)
+    const months = ['Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul', 'Jun', 'May', 'Apr', 'Mar', 'Feb', 'Jan'];
+
+    // 3. Setup Grid Layout
+    grid.style.gridTemplateColumns = `80px repeat(${stations.length}, 1fr)`;
+    grid.innerHTML = '';
+
+    // 4. Generate & Render Grid
+    months.forEach(month => {
+        // Render Month Label
+        const monthLabel = document.createElement('div');
+        monthLabel.className = 'heatmap-y-label';
+        monthLabel.innerText = month;
+        grid.appendChild(monthLabel);
+
+        // Render Scale Cells for each Station
+        stations.forEach(station => {
+            const cell = document.createElement('div');
+            cell.className = 'heatmap-cell';
+
+            // Seasonal AQI Trend Simulation
+            let baseVal = 80;
+            if (['Nov', 'Dec', 'Jan'].includes(month)) baseVal = 280;
+            if (['Oct', 'Feb'].includes(month)) baseVal = 190;
+            if (['Jun', 'Jul', 'Aug'].includes(month)) baseVal = 55;
+
+            const aqi = baseVal + (Math.random() * 60 - 30);
+            const color = getColorForAQI(aqi);
+
+            cell.style.backgroundColor = color;
+            cell.style.color = color;
+            cell.title = `${station.name} (${month}): ${Math.round(aqi)} AQI`;
+
+            grid.appendChild(cell);
+        });
+    });
+
+    // 5. Render Station Labels (X-Axis)
+    const corner = document.createElement('div');
+    grid.appendChild(corner);
+
+    stations.forEach(station => {
+        const xLabelContainer = document.createElement('div');
+        xLabelContainer.className = 'heatmap-x-label-container';
+
+        const xLabel = document.createElement('div');
+        xLabel.className = 'heatmap-x-label';
+        xLabel.innerText = station.name || station.zone_name;
+
+        xLabelContainer.appendChild(xLabel);
+        grid.appendChild(xLabelContainer);
+    });
+}
+
+function hexToRgba(hex, alpha) {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+        r = parseInt(hex.substring(1, 3), 16);
+        g = parseInt(hex.substring(3, 5), 16);
+        b = parseInt(hex.substring(5, 7), 16);
+    }
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // 4. AGRI DATA

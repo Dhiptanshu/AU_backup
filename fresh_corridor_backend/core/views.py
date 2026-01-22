@@ -11,8 +11,9 @@ from .serializers import (
 )
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.authentication import SessionAuthentication
 from django.views.decorators.csrf import csrf_exempt
 import requests
 import os
@@ -69,6 +70,7 @@ def login_role(request, role):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def auth_login(request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
@@ -97,6 +99,7 @@ def auth_login(request):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def auth_signup(request):
     serializer = SignupSerializer(data=request.data)
     if serializer.is_valid():
